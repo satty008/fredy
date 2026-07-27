@@ -125,6 +125,7 @@ function JobMutator({ source }) {
     { key: 'maxPrice', translation: t('jobs.mutation.filterMaxPrice') },
     { key: 'minSize', translation: t('jobs.mutation.filterMinSize') },
     { key: 'minRooms', translation: t('jobs.mutation.filterMinRooms') },
+    { key: 'minRoiPercent', translation: t('jobs.mutation.filterMinRoi') },
   ];
 
   const shareableUserList = useSelector((state) => state.jobsData.shareableUserList);
