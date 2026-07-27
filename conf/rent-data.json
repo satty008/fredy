@@ -1,0 +1,26 @@
+{
+  "_comment": "Average cold rent (Kaltmiete) per m²/month, used to estimate gross rental yield for the minRoiPercent job filter. These are rough starting estimates, not sourced live - check current numbers (e.g. immoscout24 Mietspiegel, empirica, or your local Gutachterausschuss) before relying on them, and edit this file freely; Fredy reloads it automatically on change.",
+  "defaultRentPerSqm": 9,
+  "cities": {
+    "münster": 12,
+    "muenster": 12,
+    "aachen": 10.5,
+    "tübingen": 13,
+    "tuebingen": 13,
+    "marburg": 10.5,
+    "göttingen": 9.5,
+    "goettingen": 9.5,
+    "gießen": 9,
+    "giessen": 9,
+    "bochum": 8.5,
+    "dortmund": 8.5,
+    "duisburg": 7.5,
+    "siegen": 7.5,
+    "kaiserslautern": 8.5,
+    "magdeburg": 7,
+    "halle": 7,
+    "leipzig": 9,
+    "chemnitz": 6.5,
+    "paderborn": 9
+  }
+}
