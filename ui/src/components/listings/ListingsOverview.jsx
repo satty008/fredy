@@ -55,6 +55,7 @@ const LISTINGS_URL_STATE = {
   active: { defaultValue: true, codec: parseNullableBoolean },
   provider: { defaultValue: null, codec: parseString },
   status: { defaultValue: null, codec: parseString },
+  aiVerdict: { defaultValue: null, codec: parseString },
   afford: { defaultValue: null, codec: parseString },
   hidden: { defaultValue: false, codec: parseNullableBoolean },
 };
@@ -94,6 +95,7 @@ const ListingsOverview = ({ mode = 'all' }) => {
     active: activityFilter,
     provider: providerFilter,
     status: statusFilter,
+    aiVerdict: aiVerdictFilter,
     afford: affordabilityFilter,
     hidden: hiddenOnly,
   } = values;
@@ -141,6 +143,7 @@ const ListingsOverview = ({ mode = 'all' }) => {
         activityFilter: isHiddenView ? null : activityFilter,
         providerFilter,
         statusFilter,
+        aiVerdictFilter,
         // The server turns this into a price range from the saved profile; it ignores the
         // filter entirely when there is no profile to derive one from.
         affordabilityFilter,
@@ -162,6 +165,7 @@ const ListingsOverview = ({ mode = 'all' }) => {
     jobNameFilter,
     watchListFilter,
     statusFilter,
+    aiVerdictFilter,
     affordabilityFilter,
     hiddenOnly,
     isWatchlistMode,
@@ -368,6 +372,22 @@ const ListingsOverview = ({ mode = 'all' }) => {
           <Select.Option value="rejected">{t('listings.filterStatusRejected')}</Select.Option>
           <Select.Option value="accepted">{t('listings.filterStatusAccepted')}</Select.Option>
           <Select.Option value="none">{t('listings.filterStatusNone')}</Select.Option>
+        </FilterSelect>
+
+        <FilterSelect
+          help={t('listings.filterAiVerdictHelp')}
+          placeholder={t('listings.filterAiVerdictPlaceholder')}
+          showClear
+          onChange={(val) => {
+            setValues({ aiVerdict: val ?? null, page: 1 });
+          }}
+          value={aiVerdictFilter}
+          style={{ width: 150 }}
+        >
+          <Select.Option value="good">{t('listings.filterAiVerdictGood')}</Select.Option>
+          <Select.Option value="maybe">{t('listings.filterAiVerdictMaybe')}</Select.Option>
+          <Select.Option value="bad">{t('listings.filterAiVerdictBad')}</Select.Option>
+          <Select.Option value="none">{t('listings.filterAiVerdictUnrated')}</Select.Option>
         </FilterSelect>
 
         {/* Only offered once the user has actually entered their financial data - there is
