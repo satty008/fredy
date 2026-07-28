@@ -1,12 +1,12 @@
 {
-  "_comment": "Average cold rent (Kaltmiete) per m2/month, used to estimate gross rental yield for the minRoiPercent job filter. Values for muenster/aachen/tuebingen/duisburg/dortmund/bochum/goettingen/magdeburg/leipzig/chemnitz were re-derived in July 2026 from sourced price-per-sqm x reported gross-yield ranges (see the 'Where to point Fredy' research artifact); the rest are still rough starting estimates. Re-check periodically (immoscout24 Mietspiegel, empirica, local Gutachterausschuss) and edit this file freely - Fredy reloads it automatically on change.",
+  "_comment": "Average cold rent (Kaltmiete) per m2/month, used to estimate gross rental yield for the minRoiPercent job filter. Re-derived in July 2026 from sourced price-per-sqm x reported gross-yield/Mietspiegel data across two research passes (see the 'Where to point Fredy' research artifact). Re-check periodically (immoscout24 Mietspiegel, empirica, local Gutachterausschuss) and edit this file freely - Fredy reloads it automatically on change.",
   "defaultRentPerSqm": 9,
   "cities": {
     "münster": 13,
     "muenster": 13,
     "aachen": 10.5,
-    "tübingen": 13,
-    "tuebingen": 13,
+    "tübingen": 13.8,
+    "tuebingen": 13.8,
     "marburg": 10.5,
     "göttingen": 14.5,
     "goettingen": 14.5,
@@ -19,8 +19,19 @@
     "kaiserslautern": 8.5,
     "magdeburg": 10.5,
     "halle": 7,
-    "leipzig": 10.5,
+    "leipzig": 11.46,
     "chemnitz": 9,
-    "paderborn": 9
+    "paderborn": 9,
+    "dresden": 11.46,
+    "aalen": 12.51,
+    "ulm": 14.5,
+    "walldorf": 12.7,
+    "wiesloch": 11.65,
+    "fulda": 10.9,
+    "heidelberg": 17,
+    "bad hersfeld": 8.35,
+    "erfurt": 9.25,
+    "pforzheim": 10.3,
+    "villingen-schwenningen": 10.7
   }
 }
