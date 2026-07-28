@@ -32,6 +32,7 @@ export const NEUTRAL = {
   active: null,
   provider: null,
   status: null,
+  aiVerdict: null,
   afford: null,
   commute: null,
   down: null,
@@ -56,6 +57,7 @@ export const FILTER_KEYS = [
   'active',
   'watch',
   'status',
+  'aiVerdict',
   'afford',
   'commute',
   'down',
@@ -193,6 +195,7 @@ export function toListingsQuery(values) {
       activityFilter: isHiddenView ? null : values.active,
       providerFilter: values.provider,
       statusFilter: values.status,
+      aiVerdictFilter: values.aiVerdict,
       // The server turns this into a price range from the saved profile; it ignores the
       // filter entirely when there is no profile to derive one from.
       affordabilityFilter: values.afford,
@@ -234,6 +237,13 @@ export function describeActiveFilters(values, { t, jobs = [], providers = [] }) 
         accepted: t('listings.filterStatusAccepted'),
         none: t('listings.filterStatusNone'),
       })[values.status] ?? values.status,
+    aiVerdict: () =>
+      ({
+        good: t('listings.filterAiVerdictGood'),
+        maybe: t('listings.filterAiVerdictMaybe'),
+        bad: t('listings.filterAiVerdictBad'),
+        none: t('listings.filterAiVerdictUnrated'),
+      })[values.aiVerdict] ?? values.aiVerdict,
     afford: () =>
       ({
         affordable: t('listings.filterAffordabilityYes'),

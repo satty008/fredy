@@ -120,6 +120,19 @@ export default function ListingsFilterPanel({
           <Select.Option value="accepted">{t('listings.filterStatusAccepted')}</Select.Option>
           <Select.Option value="none">{t('listings.filterStatusNone')}</Select.Option>
         </FilterSelect>
+        <FilterSelect
+          help={t('listings.filterAiVerdictHelp')}
+          placeholder={t('listings.filterAiVerdictPlaceholder')}
+          showClear
+          onChange={(val) => onChange({ aiVerdict: val ?? null, page: 1 })}
+          value={values.aiVerdict}
+          style={{ width: '100%' }}
+        >
+          <Select.Option value="good">{t('listings.filterAiVerdictGood')}</Select.Option>
+          <Select.Option value="maybe">{t('listings.filterAiVerdictMaybe')}</Select.Option>
+          <Select.Option value="bad">{t('listings.filterAiVerdictBad')}</Select.Option>
+          <Select.Option value="none">{t('listings.filterAiVerdictUnrated')}</Select.Option>
+        </FilterSelect>
       </FilterGroup>
 
       {(financeComplete || hasAddresses) && (
