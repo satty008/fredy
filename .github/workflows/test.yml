@@ -1,7 +1,7 @@
 name: Test
 on:
   push:
-    branches: [master]
+    branches: [master, roi-filter]
   pull_request:
     branches: [master]
   schedule:
