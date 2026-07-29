@@ -200,12 +200,9 @@ describe('listingsStorage.queryListings aiVerdictFilter', () => {
 });
 
 describe('listingsStorage.queryListings grossYieldPercent', () => {
-  let listingsStorage;
-
   beforeEach(async () => {
     calls.execute.length = 0;
     calls.query.length = 0;
-    listingsStorage = await import('../../lib/services/storage/listingsStorage.js');
   });
 
   it('attaches a rounded grossYieldPercent to each returned row when computable', async () => {

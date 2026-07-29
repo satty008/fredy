@@ -23,6 +23,8 @@
  * default matches every enabled job).
  */
 
+/* eslint-disable no-console */
+
 const required = (name) => {
   const value = process.env[name];
   if (!value) {
