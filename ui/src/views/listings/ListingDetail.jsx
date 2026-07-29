@@ -80,6 +80,7 @@ export default function ListingDetail() {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [notesDraft, setNotesDraft] = useState('');
   const [notesSaving, setNotesSaving] = useState(false);
+  const [ratingInFlight, setRatingInFlight] = useState(false);
 
   useEffect(() => {
     async function fetchListing() {
@@ -284,6 +285,23 @@ export default function ListingDetail() {
     }
   };
 
+  const handleRateWithAI = async () => {
+    if (!listing) return;
+    setRatingInFlight(true);
+    try {
+      await xhrPost('/api/listings/rate', { listingIds: [listing.id] });
+      Toast.success(t('listing.detail.toastRatingStarted'));
+    } catch (e) {
+      if (e?.status === 429) {
+        Toast.warning(t('listings.toastRatingBusy'));
+      } else {
+        Toast.error(e?.json?.message || t('listings.toastRatingError'));
+      }
+    } finally {
+      setRatingInFlight(false);
+    }
+  };
+
   const handleSaveNotes = async () => {
     if (!listing) return;
     setNotesSaving(true);
@@ -477,9 +495,21 @@ export default function ListingDetail() {
             </div>
 
             <div className="listing-detail__notes">
-              <Title heading={4} className="listing-detail__notes-title">
-                {t('listing.detail.notesTitle')}
-              </Title>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Title heading={4} className="listing-detail__notes-title">
+                  {t('listing.detail.notesTitle')}
+                </Title>
+                {listing.ai_verdict && (
+                  <Tag
+                    color={
+                      listing.ai_verdict === 'good' ? 'green' : listing.ai_verdict === 'maybe' ? 'amber' : 'red'
+                    }
+                    shape="circle"
+                  >
+                    {t(`listings.filterAiVerdict${listing.ai_verdict[0].toUpperCase()}${listing.ai_verdict.slice(1)}`)}
+                  </Tag>
+                )}
+              </div>
               <TextArea
                 value={notesDraft}
                 onChange={(val) => setNotesDraft(val)}
@@ -498,6 +528,9 @@ export default function ListingDetail() {
                   onClick={handleSaveNotes}
                 >
                   {t('listing.detail.storeNotes')}
+                </Button>
+                <Button loading={ratingInFlight} disabled={ratingInFlight} onClick={handleRateWithAI}>
+                  {t('listing.detail.rateWithAi')}
                 </Button>
               </Space>
             </div>
