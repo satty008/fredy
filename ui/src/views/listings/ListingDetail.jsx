@@ -22,6 +22,7 @@ import {
   Toast,
   TextArea,
   Tooltip,
+  Select,
 } from '@douyinfe/semi-ui-19';
 import {
   IconArrowLeft,
@@ -62,6 +63,18 @@ const STYLES = {
   STANDARD: 'https://tiles.openfreemap.org/styles/bright',
 };
 
+/**
+ * Models the AI rater is allowed to run with. Kept in sync by hand with the allowlists in
+ * lib/api/routes/listingsRouter.js and the fredy-rater webhook.js, which live outside this repo.
+ * @type {{ value: string, label: string }[]}
+ */
+const RATING_MODELS = [
+  { value: 'claude-sonnet-5', label: 'Sonnet 5' },
+  { value: 'claude-opus-5', label: 'Opus 5' },
+  { value: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5' },
+];
+const DEFAULT_RATING_MODEL = 'claude-sonnet-5';
+
 export default function ListingDetail() {
   const t = useTranslation();
   const locale = useLocale();
@@ -81,6 +94,7 @@ export default function ListingDetail() {
   const [notesDraft, setNotesDraft] = useState('');
   const [notesSaving, setNotesSaving] = useState(false);
   const [ratingInFlight, setRatingInFlight] = useState(false);
+  const [ratingModel, setRatingModel] = useState(DEFAULT_RATING_MODEL);
 
   useEffect(() => {
     async function fetchListing() {
@@ -289,7 +303,7 @@ export default function ListingDetail() {
     if (!listing) return;
     setRatingInFlight(true);
     try {
-      await xhrPost('/api/listings/rate', { listingIds: [listing.id] });
+      await xhrPost('/api/listings/rate', { listingIds: [listing.id], model: ratingModel });
       Toast.success(t('listing.detail.toastRatingStarted'));
     } catch (e) {
       if (e?.status === 429) {
@@ -529,6 +543,19 @@ export default function ListingDetail() {
                 >
                   {t('listing.detail.storeNotes')}
                 </Button>
+                <Select
+                  size="small"
+                  value={ratingModel}
+                  onChange={(val) => setRatingModel(val)}
+                  disabled={ratingInFlight}
+                  style={{ minWidth: 130 }}
+                >
+                  {RATING_MODELS.map((model) => (
+                    <Select.Option key={model.value} value={model.value}>
+                      {model.label}
+                    </Select.Option>
+                  ))}
+                </Select>
                 <Button loading={ratingInFlight} disabled={ratingInFlight} onClick={handleRateWithAI}>
                   {t('listing.detail.rateWithAi')}
                 </Button>

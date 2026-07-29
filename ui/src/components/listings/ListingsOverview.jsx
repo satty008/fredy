@@ -41,6 +41,18 @@ import { formatEuro } from '../cards/chartTheme.js';
 const LISTINGS_PAGE_SIZE = 40;
 
 /**
+ * Models the AI rater is allowed to run with. Kept in sync by hand with the allowlists in
+ * lib/api/routes/listingsRouter.js and the fredy-rater webhook.js, which live outside this repo.
+ * @type {{ value: string, label: string }[]}
+ */
+const RATING_MODELS = [
+  { value: 'claude-sonnet-5', label: 'Sonnet 5' },
+  { value: 'claude-opus-5', label: 'Opus 5' },
+  { value: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5' },
+];
+const DEFAULT_RATING_MODEL = 'claude-sonnet-5';
+
+/**
  * Every filter this page keeps in the URL, with its default and its codec.
  *
  * Module scope so its identity is stable: {@link useUrlState} memoizes on it.
@@ -107,6 +119,7 @@ const ListingsOverview = ({ mode = 'all' }) => {
   const [newAvailableCount, setNewAvailableCount] = useState(0);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [ratingInFlight, setRatingInFlight] = useState(false);
+  const [ratingModel, setRatingModel] = useState(DEFAULT_RATING_MODEL);
 
   const isHiddenView = hiddenOnly === true;
 
@@ -302,7 +315,7 @@ const ListingsOverview = ({ mode = 'all' }) => {
     if (listingIds.length === 0) return;
     setRatingInFlight(true);
     try {
-      await xhrPost('/api/listings/rate', { listingIds });
+      await xhrPost('/api/listings/rate', { listingIds, model: ratingModel });
       Toast.success(t('listings.toastRatingStarted', { count: listingIds.length }));
       setSelectedIds(new Set());
     } catch (error) {
@@ -570,6 +583,19 @@ const ListingsOverview = ({ mode = 'all' }) => {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
               <span>{t('listings.selectionBannerCount', { count: selectedIds.size })}</span>
               <div style={{ display: 'flex', gap: 8, marginLeft: 16 }}>
+                <Select
+                  size="small"
+                  value={ratingModel}
+                  onChange={(val) => setRatingModel(val)}
+                  disabled={ratingInFlight}
+                  style={{ minWidth: 130 }}
+                >
+                  {RATING_MODELS.map((model) => (
+                    <Select.Option key={model.value} value={model.value}>
+                      {model.label}
+                    </Select.Option>
+                  ))}
+                </Select>
                 <Button size="small" onClick={() => setSelectedIds(new Set())} disabled={ratingInFlight}>
                   {t('listings.selectionBannerClear')}
                 </Button>

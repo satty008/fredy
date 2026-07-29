@@ -89,7 +89,7 @@ describe('POST /rate', () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  it('forwards valid requests to the rater service with the shared secret', async () => {
+  it('forwards valid requests to the rater service with the shared secret, defaulting the model', async () => {
     global.fetch.mockResolvedValue({
       ok: true,
       status: 202,
@@ -109,9 +109,43 @@ describe('POST /rate', () => {
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({ Authorization: 'Bearer test-secret' }),
-        body: JSON.stringify({ listingIds: ['a', 'b'] }),
+        body: JSON.stringify({ listingIds: ['a', 'b'], model: 'claude-sonnet-5' }),
       }),
     );
+  });
+
+  it('forwards an explicitly chosen model to the rater service', async () => {
+    global.fetch.mockResolvedValue({
+      ok: true,
+      status: 202,
+      json: async () => ({ status: 'started', count: 1 }),
+    });
+    const app = await buildApp();
+    const response = await app.inject({
+      method: 'POST',
+      url: '/rate',
+      payload: { listingIds: ['a'], model: 'claude-opus-5' },
+    });
+
+    expect(response.statusCode).toBe(202);
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://rater.internal:8090/rate',
+      expect.objectContaining({
+        body: JSON.stringify({ listingIds: ['a'], model: 'claude-opus-5' }),
+      }),
+    );
+  });
+
+  it('rejects an unknown model', async () => {
+    const app = await buildApp();
+    const response = await app.inject({
+      method: 'POST',
+      url: '/rate',
+      payload: { listingIds: ['a'], model: 'gpt-4o' },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
   it('returns 503 when the rater service is not configured', async () => {
