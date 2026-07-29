@@ -4,6 +4,7 @@
  */
 
 import { Link } from 'react-router';
+import { Checkbox } from '@douyinfe/semi-ui-19';
 import { IconPaperclip } from '@douyinfe/semi-icons';
 import { listingPictureSrc } from '../../../services/listings/listingPictures.js';
 import { formatEuroPrice } from '../../../services/price/priceService.js';
@@ -53,7 +54,7 @@ function whereLine(item, locale, t) {
  * The age sits on the photo, the first thing someone deciding whether to call cares about; the
  * exact date is one hover away. An inactive listing says so in the same place, dimmed.
  *
- * @param {{ listings: object[], onWatch: Function, onNavigate: Function, onDelete: Function, onRestore?: Function, onReactivate?: Function, isHiddenView?: boolean, onStatusChange: Function, onApplication?: Function }} props
+ * @param {{ listings: object[], onWatch: Function, onNavigate: Function, onDelete: Function, onRestore?: Function, onReactivate?: Function, isHiddenView?: boolean, onStatusChange: Function, onApplication?: Function, selectedIds?: Set<string>, onToggleSelect?: Function }} props
  */
 const ListingsGrid = ({
   listings,
@@ -65,6 +66,8 @@ const ListingsGrid = ({
   isHiddenView = false,
   onStatusChange,
   onApplication,
+  selectedIds,
+  onToggleSelect,
 }) => {
   const t = useTranslation();
   const locale = useLocale();
@@ -86,7 +89,7 @@ const ListingsGrid = ({
             key={item.id}
             className={`listingsGrid__card${item.is_active ? '' : ' listingsGrid__card--inactive'}`}
             onClick={(event) => {
-              if (event.target.closest('a') == null) onNavigate(item.id);
+              if (event.target.closest('a, .listingsGrid__card__select') == null) onNavigate(item.id);
             }}
           >
             <div className="listingsGrid__card__media">
@@ -97,6 +100,15 @@ const ListingsGrid = ({
                 </span>
               ) : (
                 <span className="listingsGrid__card__age">{t('listings.cardInactive')}</span>
+              )}
+              {onToggleSelect && (
+                <div className="listingsGrid__card__select">
+                  <Checkbox
+                    checked={selectedIds?.has(item.id) ?? false}
+                    onChange={() => onToggleSelect(item.id)}
+                    aria-label={t('listings.selectForRating')}
+                  />
+                </div>
               )}
               <ScamBadge listing={item} variant="onImage" />
               <WatchToggle listing={item} onWatch={onWatch} variant="overlay" />

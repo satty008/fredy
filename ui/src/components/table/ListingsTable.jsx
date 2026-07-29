@@ -3,6 +3,7 @@
  * Licensed under Apache-2.0 with Commons Clause and Attribution/Naming Clause
  */
 
+import { Checkbox } from '@douyinfe/semi-ui-19';
 import { Link } from 'react-router';
 import { IconMapPin } from '@douyinfe/semi-icons';
 import ListingPhoto from '../listings/ListingPhoto.jsx';
@@ -23,7 +24,7 @@ import './ListingsTable.less';
 import { useTranslation, useLocale } from '../../services/i18n/i18n.jsx';
 
 /**
- * @param {{ listings: object[], onWatch: Function, onNavigate: Function, onDelete: Function, onRestore?: Function, onReactivate?: Function, isHiddenView?: boolean, onStatusChange: Function, onApplication?: Function }} props
+ * @param {{ listings: object[], onWatch: Function, onNavigate: Function, onDelete: Function, onRestore?: Function, onReactivate?: Function, isHiddenView?: boolean, onStatusChange: Function, onApplication?: Function, selectedIds?: Set<string>, onToggleSelect?: Function }} props
  */
 const ListingsTable = ({
   listings,
@@ -35,6 +36,8 @@ const ListingsTable = ({
   isHiddenView = false,
   onStatusChange,
   onApplication,
+  selectedIds,
+  onToggleSelect,
 }) => {
   const t = useTranslation();
   const locale = useLocale();
@@ -65,9 +68,21 @@ const ListingsTable = ({
           key={item.id}
           className="listingsTable__row"
           onClick={(event) => {
-            if (event.target.closest('a') == null) onNavigate(item.id);
+            if (event.target.closest('a, .listingsTable__row__select') == null) onNavigate(item.id);
           }}
         >
+          {onToggleSelect && (
+            <div
+              className="listingsTable__row__select"
+            >
+              <Checkbox
+                checked={selectedIds?.has(item.id) ?? false}
+                onChange={() => onToggleSelect(item.id)}
+                aria-label={t('listings.selectForRating')}
+              />
+            </div>
+          )}
+
           <div className="listingsTable__row__thumb">
             <ListingPhoto src={listingPictureSrc(item)} className="listingsTable__row__thumbPhoto" />
           </div>

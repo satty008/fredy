@@ -7,6 +7,8 @@ services:
     image: ghcr.io/orangecoding/fredy
     environment:
       - NODE_ENV=production
+      - FREDY_RATER_URL=${FREDY_RATER_URL:-}
+      - FREDY_RATER_SECRET=${FREDY_RATER_SECRET:-}
     volumes:
       - ./conf:/conf
       - ./db:/db

@@ -3,7 +3,7 @@
  * Licensed under Apache-2.0 with Commons Clause and Attribution/Naming Clause
  */
 
-import { Button, TextArea } from '@douyinfe/semi-ui-19';
+import { Button, Tag, TextArea } from '@douyinfe/semi-ui-19';
 
 import AttachmentsCard from './AttachmentsCard.jsx';
 import { useTranslation } from '../../../services/i18n/i18n.jsx';
@@ -24,6 +24,9 @@ import './ListingWorkspace.less';
  * @param {() => void} props.onSaveNotes
  * @param {boolean} props.notesSaving
  * @param {boolean} props.notesDirty - Whether the draft differs from what is stored.
+ * @param {('good'|'maybe'|'bad'|null)} [props.aiVerdict] - The stored AI review verdict, if any.
+ * @param {() => void} [props.onRateWithAi]
+ * @param {boolean} [props.ratingInFlight]
  * @returns {React.ReactElement}
  */
 export default function ListingWorkspace({
@@ -33,6 +36,9 @@ export default function ListingWorkspace({
   onSaveNotes,
   notesSaving,
   notesDirty,
+  aiVerdict = null,
+  onRateWithAi,
+  ratingInFlight = false,
 }) {
   const t = useTranslation();
 
@@ -49,6 +55,11 @@ export default function ListingWorkspace({
       <div className="listing-workspace__columns">
         <div className="listing-workspace__notes">
           <h3 className="listing-workspace__subtitle">{t('listing.detail.notesTitle')}</h3>
+          {aiVerdict && (
+            <Tag color={aiVerdict === 'good' ? 'green' : aiVerdict === 'maybe' ? 'amber' : 'red'} shape="circle">
+              {t(`listings.filterAiVerdict${aiVerdict[0].toUpperCase()}${aiVerdict.slice(1)}`)}
+            </Tag>
+          )}
           <TextArea
             value={notesDraft}
             onChange={onNotesChange}
@@ -76,6 +87,11 @@ export default function ListingWorkspace({
         >
           {t('listing.detail.storeNotes')}
         </Button>
+        {onRateWithAi && (
+          <Button loading={ratingInFlight} disabled={ratingInFlight} onClick={onRateWithAi}>
+            {t('listing.detail.rateWithAi')}
+          </Button>
+        )}
       </div>
     </section>
   );

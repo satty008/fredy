@@ -156,6 +156,7 @@ export default function ListingDetail() {
   useEffect(() => {
     document.querySelector('.app__content')?.scrollTo({ top: 0 });
   }, [listingId]);
+  const [ratingInFlight, setRatingInFlight] = useState(false);
 
   useEffect(() => {
     async function fetchListing() {
@@ -367,6 +368,23 @@ export default function ListingDetail() {
     } catch (e) {
       console.error('Failed to update status:', e);
       Toast.error(t('listings.toastStatusUpdateError'));
+    }
+  };
+
+  const handleRateWithAI = async () => {
+    if (!listing) return;
+    setRatingInFlight(true);
+    try {
+      await xhrPost('/api/listings/rate', { listingIds: [listing.id] });
+      Toast.success(t('listing.detail.toastRatingStarted'));
+    } catch (e) {
+      if (e?.status === 429) {
+        Toast.warning(t('listings.toastRatingBusy'));
+      } else {
+        Toast.error(e?.json?.message || t('listings.toastRatingError'));
+      }
+    } finally {
+      setRatingInFlight(false);
     }
   };
 
@@ -596,6 +614,9 @@ export default function ListingDetail() {
                 onSaveNotes={handleSaveNotes}
                 notesSaving={notesSaving}
                 notesDirty={(notesDraft ?? '') !== (listing.notes ?? '')}
+                aiVerdict={listing.ai_verdict}
+                onRateWithAi={handleRateWithAI}
+                ratingInFlight={ratingInFlight}
               />
             </PhoneCollapse>
           </div>

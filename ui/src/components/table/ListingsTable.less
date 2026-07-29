@@ -60,6 +60,7 @@
   }
 
   &__row {
+    position: relative;
     display: grid;
     grid-template-columns: @listing-columns;
     align-items: center;
@@ -72,6 +73,27 @@
 
     &:hover {
       background: @color-fill-subtle;
+    }
+
+    // Overlaid on the thumbnail rather than given a column of its own, so the fixed column
+    // variables above keep describing the row and its header identically.
+    &__select {
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+
+      .semi-checkbox {
+        margin: 0;
+        padding: 0;
+      }
     }
 
     &__thumb {
