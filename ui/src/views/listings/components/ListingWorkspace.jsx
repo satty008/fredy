@@ -3,7 +3,7 @@
  * Licensed under Apache-2.0 with Commons Clause and Attribution/Naming Clause
  */
 
-import { Button, Tag, TextArea } from '@douyinfe/semi-ui-19';
+import { Button, Select, Tag, TextArea } from '@douyinfe/semi-ui-19';
 
 import AttachmentsCard from './AttachmentsCard.jsx';
 import { useTranslation } from '../../../services/i18n/i18n.jsx';
@@ -27,6 +27,9 @@ import './ListingWorkspace.less';
  * @param {('good'|'maybe'|'bad'|null)} [props.aiVerdict] - The stored AI review verdict, if any.
  * @param {() => void} [props.onRateWithAi]
  * @param {boolean} [props.ratingInFlight]
+ * @param {string} [props.ratingModel]
+ * @param {{ value: string, label: string }[]} [props.ratingModels]
+ * @param {(value: string) => void} [props.onRatingModelChange]
  * @returns {React.ReactElement}
  */
 export default function ListingWorkspace({
@@ -39,6 +42,9 @@ export default function ListingWorkspace({
   aiVerdict = null,
   onRateWithAi,
   ratingInFlight = false,
+  ratingModel,
+  ratingModels = [],
+  onRatingModelChange,
 }) {
   const t = useTranslation();
 
@@ -87,6 +93,21 @@ export default function ListingWorkspace({
         >
           {t('listing.detail.storeNotes')}
         </Button>
+        {onRateWithAi && ratingModels.length > 0 && (
+          <Select
+            size="small"
+            value={ratingModel}
+            onChange={onRatingModelChange}
+            disabled={ratingInFlight}
+            style={{ minWidth: 130 }}
+          >
+            {ratingModels.map((model) => (
+              <Select.Option key={model.value} value={model.value}>
+                {model.label}
+              </Select.Option>
+            ))}
+          </Select>
+        )}
         {onRateWithAi && (
           <Button loading={ratingInFlight} disabled={ratingInFlight} onClick={onRateWithAi}>
             {t('listing.detail.rateWithAi')}

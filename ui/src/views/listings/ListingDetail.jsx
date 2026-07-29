@@ -44,6 +44,18 @@ const { Text } = Typography;
 const RAIL_BREAKPOINT = 1180;
 
 /**
+ * Models the AI rater is allowed to run with. Kept in sync by hand with the allowlists in
+ * lib/api/routes/listingsRouter.js and the fredy-rater webhook.js, which live outside this repo.
+ * @type {{ value: string, label: string }[]}
+ */
+const RATING_MODELS = [
+  { value: 'claude-sonnet-5', label: 'Sonnet 5' },
+  { value: 'claude-opus-5', label: 'Opus 5' },
+  { value: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5' },
+];
+const DEFAULT_RATING_MODEL = 'claude-sonnet-5';
+
+/**
  * A card that folds itself shut on a phone and stays open everywhere else.
  *
  * One column of six open cards is a very long page, and the ones worth folding are the ones read
@@ -157,6 +169,7 @@ export default function ListingDetail() {
     document.querySelector('.app__content')?.scrollTo({ top: 0 });
   }, [listingId]);
   const [ratingInFlight, setRatingInFlight] = useState(false);
+  const [ratingModel, setRatingModel] = useState(DEFAULT_RATING_MODEL);
 
   useEffect(() => {
     async function fetchListing() {
@@ -375,7 +388,7 @@ export default function ListingDetail() {
     if (!listing) return;
     setRatingInFlight(true);
     try {
-      await xhrPost('/api/listings/rate', { listingIds: [listing.id] });
+      await xhrPost('/api/listings/rate', { listingIds: [listing.id], model: ratingModel });
       Toast.success(t('listing.detail.toastRatingStarted'));
     } catch (e) {
       if (e?.status === 429) {
@@ -617,6 +630,9 @@ export default function ListingDetail() {
                 aiVerdict={listing.ai_verdict}
                 onRateWithAi={handleRateWithAI}
                 ratingInFlight={ratingInFlight}
+                ratingModel={ratingModel}
+                ratingModels={RATING_MODELS}
+                onRatingModelChange={setRatingModel}
               />
             </PhoneCollapse>
           </div>
