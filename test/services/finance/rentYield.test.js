@@ -18,7 +18,11 @@ beforeEach(async () => {
     dataFile,
     JSON.stringify({
       defaultRentPerSqm: 9,
-      cities: { Münster: 12, Aachen: 10.5 },
+      cities: {
+        Münster: 12,
+        Aachen: 10.5,
+        Leipzig: { default: 10, areas: { Connewitz: 12.5, Grünau: 8 } },
+      },
     }),
   );
   process.env.RENT_DATA_PATH = dataFile;
@@ -49,6 +53,19 @@ describe('rentPerSqmFor', () => {
   it('returns null when the data file is missing', () => {
     fs.rmSync(dataFile, { force: true });
     expect(rentPerSqmFor({ address: 'Musterstraße 1, 48143 Münster' })).toBe(null);
+  });
+
+  it('prefers an area match over the city default when the city has area-level data', () => {
+    expect(rentPerSqmFor({ address: 'Musterweg 3, Leipzig-Connewitz' })).toBe(12.5);
+  });
+
+  it('falls back to the city default when the city has area data but none of its areas match', () => {
+    expect(rentPerSqmFor({ address: 'Musterweg 3, 04103 Leipzig' })).toBe(10);
+  });
+
+  it('does not let an area name match against a different city (no false cross-city match)', () => {
+    // "Grünau" is a Leipzig district; this address never mentions Leipzig at all.
+    expect(rentPerSqmFor({ address: 'Grünau 5, 48143 Münster' })).toBe(12);
   });
 });
 
