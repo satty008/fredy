@@ -209,6 +209,9 @@ describe('listingsStorage.queryListings grossYieldPercent', () => {
     vi.resetModules();
     vi.doMock('../../lib/services/finance/rentYield.js', () => ({
       grossYieldPercent: (row) => (row.id === 'a' ? 5.6789 : null),
+      // netYieldPercent isn't under test here, but parseListingStatus calls it unconditionally,
+      // so a mock that omits it breaks every test that imports listingsStorage.js afterward.
+      netYieldPercent: () => null,
     }));
     const freshStorage = await import('../../lib/services/storage/listingsStorage.js');
     sqliteMock.__queryHandler = (sql) => {

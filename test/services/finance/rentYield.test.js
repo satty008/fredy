@@ -32,9 +32,8 @@ beforeEach(async () => {
   // The module reads RENT_DATA_PATH once at import time, so force a fresh module instance
   // per test rather than relying on its internal mtime-based cache.
   vi.resetModules();
-  ({ rentPerSqmFor, grossYieldPercent, bundeslandFor, kaufnebenkostenPercent, netYieldPercent } = await import(
-    '../../../lib/services/finance/rentYield.js'
-  ));
+  ({ rentPerSqmFor, grossYieldPercent, bundeslandFor, kaufnebenkostenPercent, netYieldPercent } =
+    await import('../../../lib/services/finance/rentYield.js'));
 });
 
 afterEach(() => {
