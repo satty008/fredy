@@ -10,6 +10,9 @@ import path from 'path';
 
 let rentPerSqmFor;
 let grossYieldPercent;
+let bundeslandFor;
+let kaufnebenkostenPercent;
+let netYieldPercent;
 let dataFile;
 
 beforeEach(async () => {
@@ -29,7 +32,9 @@ beforeEach(async () => {
   // The module reads RENT_DATA_PATH once at import time, so force a fresh module instance
   // per test rather than relying on its internal mtime-based cache.
   vi.resetModules();
-  ({ rentPerSqmFor, grossYieldPercent } = await import('../../../lib/services/finance/rentYield.js'));
+  ({ rentPerSqmFor, grossYieldPercent, bundeslandFor, kaufnebenkostenPercent, netYieldPercent } = await import(
+    '../../../lib/services/finance/rentYield.js'
+  ));
 });
 
 afterEach(() => {
@@ -87,5 +92,80 @@ describe('grossYieldPercent', () => {
   it('returns null when no rent estimate can be found', () => {
     fs.rmSync(dataFile, { force: true });
     expect(grossYieldPercent({ price: 200000, size: 60, address: 'Münster' })).toBe(null);
+  });
+});
+
+describe('bundeslandFor', () => {
+  it('resolves a Bundesland from the 5-digit PLZ in the address', () => {
+    expect(bundeslandFor({ address: 'Musterstraße 1, 48143 Münster' })).toBe('nordrhein-westfalen');
+    expect(bundeslandFor({ address: '04103 Leipzig' })).toBe('sachsen');
+  });
+
+  it('resolves the dominant Bundesland for a prefix that spans state borders (Ulm/Neu-Ulm, 89)', () => {
+    // 89 is ~57% Baden-Württemberg / ~43% Bayern by population - a real geographic edge case
+    // (Ulm and Neu-Ulm sit on opposite banks of the Danube, in different states), not a bug.
+    expect(bundeslandFor({ address: '89073 Ulm' })).toBe('baden-württemberg');
+  });
+
+  it('returns null when the address has no 5-digit PLZ', () => {
+    expect(bundeslandFor({ address: 'Musterstraße ohne Postleitzahl' })).toBe(null);
+  });
+
+  it('returns null when the address is missing entirely', () => {
+    expect(bundeslandFor({})).toBe(null);
+  });
+
+  it('returns null for a PLZ prefix not in the table', () => {
+    expect(bundeslandFor({ address: '00000 Nirgendwo' })).toBe(null);
+  });
+});
+
+describe('kaufnebenkostenPercent', () => {
+  it('sums Grunderwerbsteuer (by Bundesland) with the standard Notar/Grundbuch/Makler assumptions', () => {
+    // NRW Grunderwerbsteuer 6.5% + 2% Notar/Grundbuch + 3.57% Makler = 12.07%
+    expect(kaufnebenkostenPercent({ address: '48143 Münster' })).toBeCloseTo(0.1207, 6);
+    // Sachsen 5.5% + 2% + 3.57% = 11.07%
+    expect(kaufnebenkostenPercent({ address: '04103 Leipzig' })).toBeCloseTo(0.1107, 6);
+  });
+
+  it('returns null when the Bundesland cannot be resolved', () => {
+    expect(kaufnebenkostenPercent({ address: 'keine PLZ hier' })).toBe(null);
+  });
+});
+
+describe('netYieldPercent', () => {
+  it('computes (grossAnnualRent * 0.8) / (price * (1 + kaufnebenkosten)) * 100', () => {
+    // 12 EUR/m² * 60m² * 12mo = 8640 gross annual rent; * 0.8 = 6912 net.
+    // price 200000 * (1 + 0.1207) = 224140 total acquisition cost.
+    // 6912 / 224140 * 100 = 3.083787%
+    const result = netYieldPercent({ price: 200000, size: 60, address: '48143 Münster' });
+    expect(result).toBeCloseTo(3.083787, 4);
+  });
+
+  it('is meaningfully lower than grossYieldPercent for the same listing', () => {
+    const listing = { price: 200000, size: 60, address: '04103 Leipzig-Connewitz' };
+    const gross = grossYieldPercent(listing);
+    const net = netYieldPercent(listing);
+    expect(net).toBeLessThan(gross);
+    // Kaufnebenkosten + the non-allocable cost assumption should pull this down by more than a
+    // token amount - this is the whole point of the metric.
+    expect(gross - net).toBeGreaterThan(1);
+  });
+
+  it('returns null when price is missing', () => {
+    expect(netYieldPercent({ size: 60, address: '48143 Münster' })).toBe(null);
+  });
+
+  it('returns null when size is missing', () => {
+    expect(netYieldPercent({ price: 200000, address: '48143 Münster' })).toBe(null);
+  });
+
+  it('returns null when no rent estimate can be found', () => {
+    fs.rmSync(dataFile, { force: true });
+    expect(netYieldPercent({ price: 200000, size: 60, address: '48143 Münster' })).toBe(null);
+  });
+
+  it('returns null when the Bundesland cannot be resolved, even with a known rent', () => {
+    expect(netYieldPercent({ price: 200000, size: 60, address: 'Münster ohne PLZ' })).toBe(null);
   });
 });
