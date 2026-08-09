@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useSelector, useActions } from '../../services/state/store.js';
+import { IconLink } from '@douyinfe/semi-icons';
 import { Banner, Button, Space, Spin, Toast, Typography } from '@douyinfe/semi-ui-19';
 
 import maplibregl from '../../components/map/maplibre.js';
@@ -54,6 +55,37 @@ const RATING_MODELS = [
   { value: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5' },
 ];
 const DEFAULT_RATING_MODEL = 'claude-sonnet-5';
+
+/**
+ * Base URL of the immocockpit deep-link target. Kept in sync by hand with that app's own
+ * repo/deployment (satty008/immocockpit) - a separate host with no shared build, same as the
+ * RATING_MODELS allowlist above.
+ */
+const IMMOCOCKPIT_BASE_URL = 'https://immocockpit.bhavibhavan.duckdns.org/';
+
+/**
+ * Builds the deep-link that hands a listing off to immocockpit for a full rental-investment
+ * analysis (yield, tax, depreciation, 30-year projection) - the one axis Fredy's own finance
+ * module deliberately doesn't model, since it only ever measures affordability against the
+ * buyer's own household income, never against rental income the property itself would produce.
+ *
+ * `listing.currentRent` does not exist yet (fredy-rater's LLM extraction of a stated in-place
+ * tenancy rent is a separate, not-yet-shipped change) - reading it here is forward-compatible:
+ * `actualRent` just stays omitted until that field starts arriving.
+ *
+ * @param {Object} listing
+ * @returns {string}
+ */
+function buildImmocockpitUrl(listing) {
+  const params = new URLSearchParams({ src: 'fredy', listingId: String(listing.id) });
+  if (listing.address) params.set('address', listing.address);
+  if (Number.isFinite(listing.price)) params.set('price', String(listing.price));
+  if (Number.isFinite(listing.size)) params.set('area', String(listing.size));
+  if (listing.bundeslandCode) params.set('state', listing.bundeslandCode);
+  if (Number.isFinite(listing.targetRent)) params.set('targetRent', String(Math.round(listing.targetRent)));
+  if (Number.isFinite(listing.currentRent)) params.set('actualRent', String(Math.round(listing.currentRent)));
+  return `${IMMOCOCKPIT_BASE_URL}?${params.toString()}`;
+}
 
 /**
  * A card that folds itself shut on a phone and stays open everywhere else.
@@ -648,6 +680,27 @@ export default function ListingDetail() {
           </div>
 
           <div className="listing-detail__sec--finance">
+            {/* Affordability (below) answers "can I have this?"; this answers "is it a good
+                deal?" - a question Fredy's own finance module deliberately doesn't model, since it
+                never nets rental income against the mortgage. Always available for a priced
+                purchase listing, independent of whether the household profile is set up. */}
+            {!isRental && listing.price != null && (
+              <section className="listing-card listing-detail__finance-hint">
+                <Space align="center" wrap>
+                  <IconEuro className="listing-detail__finance-hint-icon" />
+                  <Text type="secondary">{t('listing.detail.analyzeHint')}</Text>
+                  <Button
+                    theme="borderless"
+                    size="small"
+                    icon={<IconLink />}
+                    onClick={() => window.open(buildImmocockpitUrl(listing), '_blank', 'noopener,noreferrer')}
+                  >
+                    {t('listing.detail.analyzeButton')}
+                  </Button>
+                </Space>
+              </section>
+            )}
+
             <ListingFinanceCard listing={listing} />
 
             {/* Without the matching half of the profile there is nothing to compute, so offer the
