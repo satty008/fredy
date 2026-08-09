@@ -762,6 +762,8 @@
   "listing.detail.financeLoan": "Loan needed",
   "listing.detail.financeAfterYears": "after {{years}} years",
   "listing.detail.financeFootnote": "Based on your saved profile at {{rate}} % interest and {{tilgung}} % repayment.",
+  "listing.detail.analyzeHint": "See the full yield, tax and 30-year projection for this property as a rental investment.",
+  "listing.detail.analyzeButton": "Analyze in Immocockpit",
   "listing.detail.financeSetupHint": "Want to know what this would cost you monthly?",
   "listing.detail.financeCalculate": "Calculate financing",
   "listing.detail.rentSetupHint": "Want to know if this rent fits your budget?",

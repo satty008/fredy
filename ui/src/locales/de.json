@@ -762,6 +762,8 @@
   "listing.detail.financeLoan": "Benötigtes Darlehen",
   "listing.detail.financeAfterYears": "nach {{years}} Jahren",
   "listing.detail.financeFootnote": "Auf Basis deines Profils mit {{rate}} % Sollzins und {{tilgung}} % Tilgung.",
+  "listing.detail.analyzeHint": "Volle Rendite-, Steuer- und 30-Jahres-Projektion für diese Immobilie als Kapitalanlage ansehen.",
+  "listing.detail.analyzeButton": "In Immocockpit analysieren",
   "listing.detail.financeSetupHint": "Wissen, was dich das monatlich kostet?",
   "listing.detail.financeCalculate": "Finanzierung berechnen",
   "listing.detail.rentSetupHint": "Wissen, ob diese Miete in dein Budget passt?",

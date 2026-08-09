@@ -10,7 +10,9 @@ import path from 'path';
 
 let rentPerSqmFor;
 let grossYieldPercent;
+let targetRentFor;
 let bundeslandFor;
+let bundeslandCodeFor;
 let kaufnebenkostenPercent;
 let netYieldPercent;
 let dataFile;
@@ -32,8 +34,15 @@ beforeEach(async () => {
   // The module reads RENT_DATA_PATH once at import time, so force a fresh module instance
   // per test rather than relying on its internal mtime-based cache.
   vi.resetModules();
-  ({ rentPerSqmFor, grossYieldPercent, bundeslandFor, kaufnebenkostenPercent, netYieldPercent } =
-    await import('../../../lib/services/finance/rentYield.js'));
+  ({
+    rentPerSqmFor,
+    grossYieldPercent,
+    targetRentFor,
+    bundeslandFor,
+    bundeslandCodeFor,
+    kaufnebenkostenPercent,
+    netYieldPercent,
+  } = await import('../../../lib/services/finance/rentYield.js'));
 });
 
 afterEach(() => {
@@ -94,6 +103,25 @@ describe('grossYieldPercent', () => {
   });
 });
 
+describe('targetRentFor', () => {
+  it('computes rentPerSqm * size for a matched city', () => {
+    expect(targetRentFor({ size: 60, address: 'Münster' })).toBe(720); // 12 * 60
+  });
+
+  it('falls back to defaultRentPerSqm when no city matches', () => {
+    expect(targetRentFor({ size: 60, address: '99999 Nirgendwo' })).toBe(540); // 9 * 60
+  });
+
+  it('returns null when size is missing', () => {
+    expect(targetRentFor({ address: 'Münster' })).toBe(null);
+  });
+
+  it('returns null when no rent estimate can be found', () => {
+    fs.rmSync(dataFile, { force: true });
+    expect(targetRentFor({ size: 60, address: 'Münster' })).toBe(null);
+  });
+});
+
 describe('bundeslandFor', () => {
   it('resolves a Bundesland from the 5-digit PLZ in the address', () => {
     expect(bundeslandFor({ address: 'Musterstraße 1, 48143 Münster' })).toBe('nordrhein-westfalen');
@@ -116,6 +144,24 @@ describe('bundeslandFor', () => {
 
   it('returns null for a PLZ prefix not in the table', () => {
     expect(bundeslandFor({ address: '00000 Nirgendwo' })).toBe(null);
+  });
+});
+
+describe('bundeslandCodeFor', () => {
+  it('resolves the two-letter code for a Bundesland name with no special characters', () => {
+    expect(bundeslandCodeFor({ address: '04103 Leipzig' })).toBe('SN'); // sachsen
+  });
+
+  it('resolves the two-letter code for a Bundesland name with an umlaut', () => {
+    expect(bundeslandCodeFor({ address: '89073 Ulm' })).toBe('BW'); // baden-württemberg
+  });
+
+  it('resolves the two-letter code for a hyphenated Bundesland name', () => {
+    expect(bundeslandCodeFor({ address: '48143 Münster' })).toBe('NW'); // nordrhein-westfalen
+  });
+
+  it('returns null when the Bundesland cannot be resolved', () => {
+    expect(bundeslandCodeFor({ address: 'keine PLZ hier' })).toBe(null);
   });
 });
 
