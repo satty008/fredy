@@ -625,15 +625,12 @@ export default function ListingDetail() {
                 ))}
               </Descriptions>
 
-              {/* The costing answers "can I have this?", which is the question asked right
-                  after the price - so it comes before the sales copy, not after it. */}
-              <ListingFinanceCard listing={listing} />
-
-              {/* Affordability (above) answers "can I have this?"; this answers "is it a good
-                  deal?" - a question Fredy's own finance module deliberately doesn't model,
-                  since it never nets rental income against the mortgage. Always available for a
-                  priced purchase listing, independent of whether the household profile is set
-                  up, unlike the profile-setup hint below. */}
+              {/* Answers "is it a good deal?" - a question Fredy's own finance module
+                  deliberately doesn't model, since it never nets rental income against the
+                  mortgage. Placed right after the details, ahead of the (potentially tall,
+                  chart-bearing) affordability card below, so it's visible without scrolling.
+                  Always available for a priced purchase listing, independent of whether the
+                  household profile is set up. */}
               {!isRental && listing.price != null && (
                 <>
                   <Divider margin="1.5rem" />
@@ -651,6 +648,10 @@ export default function ListingDetail() {
                   </Space>
                 </>
               )}
+
+              {/* The costing answers "can I have this?", which is the question asked right
+                  after the price - so it comes before the sales copy, not after it. */}
+              <ListingFinanceCard listing={listing} />
 
               {/* Without the matching half of the profile there is nothing to compute, so offer
                   the way to create it instead of hiding the feature completely. */}
