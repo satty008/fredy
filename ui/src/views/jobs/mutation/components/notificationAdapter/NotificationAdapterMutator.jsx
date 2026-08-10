@@ -6,7 +6,8 @@
 import { useState } from 'react';
 
 import { transform } from '../../../../../services/transformer/notificationAdapterTransformer';
-import { xhrPost } from '../../../../../services/xhr';
+import { xhrPost, errorMessage } from '../../../../../services/xhr';
+import { triggerTestNotification } from '../../../../../services/notification/browserNotification';
 import Help from './NotificationHelpDisplay';
 import { useSelector } from '../../../../../services/state/store';
 import { Banner, Button, Form, Modal, Select, Switch } from '@douyinfe/semi-ui-19';
@@ -122,6 +123,11 @@ export default function NotificationAdapterMutator({
       return;
     }
 
+    if (selectedAdapter.id === 'browser') {
+      triggerTestNotification(t, setSuccessMessage, setValidationMessage);
+      return;
+    }
+
     xhrPost('/api/jobs/notificationAdapter/try', {
       id: selectedAdapter.id,
       fields: {
@@ -131,7 +137,11 @@ export default function NotificationAdapterMutator({
       .then(() => {
         setSuccessMessage(t('notification.trySuccess'));
       })
-      .catch((error) => setValidationMessage(t('notification.tryError', { error: error.json.message })));
+      // The route answers with `{ error }`, not `{ message }`, so the reason - a rejected
+      // privileged field, the adapter's own failure text - came out as "undefined".
+      .catch((error) =>
+        setValidationMessage(t('notification.tryError', { error: errorMessage(error, t('common.unknownError')) })),
+      );
   };
 
   const setValue = (selectedAdapter, uiElement, key, value) => {

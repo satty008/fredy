@@ -4,26 +4,58 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { parseBoolean, parseNumber, parseString, useSearchParamState } from '../../hooks/useSearchParamState.js';
+import { useUrlState, parseNumber, parseString, parseBoolean } from '../../hooks/useSearchParamState.js';
 import { getAddresses } from '../../utils.js';
-import { renderToString } from 'react-dom/server';
 import maplibregl from '../../components/map/maplibre.js';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useActions, useSelector } from '../../services/state/store.js';
-import { distanceMeters, generateCircleCoords, getBoundsFromCenter, getBoundsFromCoords } from './mapUtils.js';
+import {
+  distanceMeters,
+  generateCircleCoords,
+  getBoundsFromCenter,
+  getBoundsFromCoords,
+  groupListingsByPosition,
+} from './mapUtils.js';
 import { Banner, Select, Switch, Toast, Typography } from '@douyinfe/semi-ui-19';
-import { IconDelete, IconEyeOpened, IconLink } from '@douyinfe/semi-icons';
 
-import no_image from '../../assets/no_image.png';
 import _RangeSlider from 'react-range-slider-input';
 import 'react-range-slider-input/dist/style.css';
 import './Map.less';
-import { xhrDelete } from '../../services/xhr.js';
+import { xhrDelete, errorMessage } from '../../services/xhr.js';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import ListingDeletionModal from '../../components/ListingDeletionModal.jsx';
+import { createListingPopupContent } from './listingPopupContent.jsx';
 import Map from '../../components/map/Map.jsx';
 import Headline from '../../components/headline/Headline.jsx';
 import { useTranslation } from '../../services/i18n/i18n.jsx';
+import { keepPopupInView, mountPopupNode } from '../../components/map/popupContent.jsx';
+import NearbyStops from '../../components/transit/NearbyStops.jsx';
+import { COMMUTE_OPTIONS, parseCommuteFilter } from '../../components/transit/travelTimeFormat.js';
+
+/**
+ * The map's URL-backed view state: which job, the distance ring, the basemap and the optional
+ * overlays (3D buildings, public transport).
+ *
+ * Module scope so its identity is stable for the hook's memo.
+ */
+const MAP_URL_STATE = {
+  job: { defaultValue: null, codec: parseString },
+  distance: { defaultValue: 0, codec: parseNumber },
+  // Mode and ceiling in one key, as `transit:30`, so a bookmarked URL can never carry half a filter.
+  commute: { defaultValue: null, codec: parseString },
+  style: { defaultValue: 'STANDARD', codec: parseString },
+  buildings: { defaultValue: false, codec: parseBoolean },
+  // On by default: "how do I get out of here?" is asked about every flat, so the answer should be
+  // on screen without switching anything on first. `?transit=false` turns it off.
+  transit: { defaultValue: true, codec: parseBoolean },
+};
+
+/**
+ * Upper bound for a listing popup. It carries an image, five rows of details and the nearby stops,
+ * which MapLibre's 240px default squeezes into an unreadable column; the stylesheet narrows it
+ * again on phones.
+ */
+const LISTING_POPUP_MAX_WIDTH = '380px';
 
 const RangeSlider = _RangeSlider?.default ?? _RangeSlider;
 
@@ -31,10 +63,11 @@ const { Text } = Typography;
 
 export default function MapView() {
   const t = useTranslation();
-  const mapContainer = useRef(null);
   const map = useRef(null);
   const markers = useRef([]);
   const homeMarkers = useRef([]);
+  // Every React tree mounted into a popup, so they can be torn down with their markers.
+  const popupRoots = useRef([]);
   const actions = useActions();
   const navigate = useNavigate();
   const sp = useSearchParams();
@@ -42,14 +75,27 @@ export default function MapView() {
   const listings = useSelector((state) => state.listingsData.mapListings);
   const userSettings = useSelector((state) => state.userSettings.settings);
   const homeAddresses = useMemo(() => getAddresses(userSettings), [userSettings]);
+  const language = userSettings?.language ?? 'en';
+  // Absent means off, which is why this needed no migration.
+  const transitHoverPopups = userSettings?.transit_hover_popups === true;
   const listingDeletionPref = userSettings?.listing_deletion_preference;
   const defaultDeleteType = listingDeletionPref?.hardDelete ? 'hard' : 'soft';
 
   const jobs = useSelector((state) => state.jobsData.jobs);
-  const [jobId, setJobId] = useSearchParamState(sp, 'job', null, parseString);
-  const [distanceFilter, setDistanceFilter] = useSearchParamState(sp, 'distance', 0, parseNumber);
-  const [style] = useSearchParamState(sp, 'style', 'STANDARD', parseString);
-  const [show3dBuildings, setShow3dBuildings] = useSearchParamState(sp, 'buildings', false, parseBoolean);
+  // One grouped state rather than four independent setters: two of these can change in the same
+  // tick, and separate setSearchParams calls overwrite each other.
+  const { values: urlState, setValue: setUrlValue, setValues } = useUrlState(sp, MAP_URL_STATE);
+  const {
+    job: jobId,
+    distance: distanceFilter,
+    commute: commuteFilter,
+    style,
+    buildings: show3dBuildings,
+    transit: showTransit,
+  } = urlState;
+  const setJobId = (value) => setUrlValue('job', value);
+  const setDistanceFilter = (value) => setUrlValue('distance', value);
+  const setCommuteFilter = (value) => setUrlValue('commute', value);
 
   // Price range: stored as priceMin/priceMax URL params; default max derived from loaded listings
   const urlPriceMin = searchParams.has('priceMin') ? Number(searchParams.get('priceMin')) : null;
@@ -69,7 +115,7 @@ export default function MapView() {
       Toast.success(t('map.toastDeleted'));
       fetchListings();
     } catch (error) {
-      Toast.error(error.message || t('map.toastDeleteError'));
+      Toast.error(errorMessage(error, t('map.toastDeleteError')));
     } finally {
       setDeleteModalVisible(false);
       setListingToDelete(null);
@@ -103,8 +149,32 @@ export default function MapView() {
     const min = priceRange[0];
     const max = priceRange[1] && priceRange[1] > 0 ? priceRange[1] : getMaxPrice();
 
-    return listings.filter((listing) => listing.price && listing.price >= min && listing.price <= max);
+    return listings
+      .filter((listing) => listing.price && listing.price >= min && listing.price <= max)
+      .filter(withinCommute);
   };
+
+  /**
+   * Whether a listing is reachable within the selected ceiling.
+   *
+   * Unlike the distance ring, which only recolours pins, this one hides them: a commute ceiling is
+   * asked as "show me only what I could actually live with", and a pin that fails it is noise.
+   *
+   * A listing that has not been routed yet has nothing to answer with and drops out. That is why the
+   * control sits next to a legend saying so, rather than being on by default.
+   *
+   * @param {Object} listing
+   * @returns {boolean}
+   */
+  function withinCommute(listing) {
+    const parsed = parseCommuteFilter(commuteFilter);
+    if (parsed == null) {
+      return true;
+    }
+    return (Array.isArray(listing.travelTimes) ? listing.travelTimes : []).some(
+      (entry) => entry?.[parsed.mode]?.minutes != null && entry[parsed.mode].minutes <= parsed.maxMinutes,
+    );
+  }
 
   useEffect(() => {
     window.deleteListing = (id) => deleteListingRef.current(id);
@@ -119,39 +189,24 @@ export default function MapView() {
     };
   }, [navigate]);
 
-  useEffect(() => {
-    if (mapContainer.current && !map.current) {
-      const checkMapReady = () => {
-        if (mapContainer.current?.map) {
-          map.current = mapContainer.current.map;
-        } else {
-          setTimeout(checkMapReady, 100);
-        }
-      };
-      checkMapReady();
-    }
-  }, []);
-
   const handleMapReady = (mapInstance) => {
     map.current = mapInstance;
   };
 
-  const handleMapStyle = (value) => {
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        if (value === 'STANDARD') {
-          next.delete('style');
-        } else {
-          next.set('style', value);
-        }
-        if (value === 'SATELLITE') {
-          next.delete('buildings');
-        }
-        return next;
-      },
-      { replace: true },
-    );
+  /**
+   * The map's own controls report one patch per user action; write it straight into the URL.
+   *
+   * `setValues` drops any value equal to its declared default, so a pristine view keeps a clean
+   * address, and the map already clears the 3D buildings flag when the basemap goes to satellite.
+   *
+   * @param {{style?: string, show3dBuildings?: boolean, showTransit?: boolean}} patch
+   */
+  const handleControlsChange = (patch) => {
+    setValues({
+      ...('style' in patch ? { style: patch.style } : {}),
+      ...('show3dBuildings' in patch ? { buildings: patch.show3dBuildings } : {}),
+      ...('showTransit' in patch ? { transit: patch.showTransit } : {}),
+    });
   };
 
   const handlePriceRange = (val) => {
@@ -233,7 +288,7 @@ export default function MapView() {
         });
       }
     }
-  }, [homeAddresses, distanceFilter, listings]);
+  }, [homeAddresses, distanceFilter, commuteFilter, listings]);
 
   useEffect(() => {
     if (!map.current) return;
@@ -243,6 +298,9 @@ export default function MapView() {
 
     homeMarkers.current.forEach((marker) => marker.remove());
     homeMarkers.current = [];
+
+    popupRoots.current.forEach((unmount) => unmount());
+    popupRoots.current = [];
 
     homeAddresses.forEach((home) => {
       const marker = new maplibregl.Marker({ color: 'red' })
@@ -309,81 +367,71 @@ export default function MapView() {
       map.current.on('load', updateLayers);
     }
 
-    filterListings().forEach((listing) => {
-      if (
-        listing.latitude != null &&
-        listing.longitude != null &&
-        listing.latitude !== -1 &&
-        listing.longitude !== -1
-      ) {
-        const capitalizedProvider = listing.provider
-          ? listing.provider.charAt(0).toUpperCase() + listing.provider.slice(1)
-          : 'N/A';
+    // One marker per position rather than per listing: listings that share an address (a whole
+    // house, or a town that could only be geocoded to its centre) used to stack invisibly, with
+    // only the topmost one reachable.
+    groupListingsByPosition(filterListings()).forEach(({ lat, lng, listings: grouped }) => {
+      let popup = null;
+      let stopFit = null;
 
-        const popupContent = `
-          <div class="map-popup-content">
-            <img
-              src="${listing.image_url}"
-              onerror="this.onerror=null;this.src='${no_image}'"
-            />
-            <h4>${listing.title}</h4>
-            <div class="info">
-              <span><strong>${t('map.popupPrice')}</strong> ${listing.price ? listing.price + ' €' : t('common.na')}</span>
-              <span><strong>${t('map.popupAddress')}</strong> ${listing.address || t('common.na')}</span>
-              <span><strong>${t('map.popupJob')}</strong> ${listing.job_name || t('common.na')}</span>
-              <span><strong>${t('map.popupProvider')}</strong> ${capitalizedProvider}</span>
-              <span><strong>${t('map.popupSize')}</strong> ${listing.size != null ? `${listing.size} m²` : t('common.na')}</span>
-              <div style="display: flex; gap: 8px; margin-top: 8px; justify-content: space-between;">
-                <div class="map-popup-content__linkButton">
-                  <a href="${listing.link}" target="_blank" rel="noopener noreferrer">
-                    ${renderToString(<IconLink />)}
-                  </a>
-                </div>
-                <button
-                  class="map-popup-content__detailsButton"
-                  title="${t('map.popupViewDetails')}"
-                  onclick="viewDetails('${listing.id}')"
-                >
-                  ${renderToString(<IconEyeOpened />)}
-                </button>
-                <button
-                  class="map-popup-content__deleteButton"
-                  title="${t('map.popupRemove')}"
-                  onclick="deleteListing('${listing.id}')"
-                >
-                  ${renderToString(<IconDelete />)}
-                </button>
-              </div>
-            </div>
-          </div>`;
+      // Paging changes the popup's height, so it has to be fitted into the map again.
+      const refit = () => {
+        if (!popup || !map.current) return;
+        stopFit?.();
+        stopFit = keepPopupInView(map.current, popup);
+      };
 
-        const popup = new maplibregl.Popup({ offset: 25 }).setHTML(popupContent);
+      const { element, transitMount } = createListingPopupContent({ listings: grouped, t, onPageChange: refit });
 
-        let color = '#3FB1CE';
-        if (distanceFilter > 0 && homeAddresses.length > 0) {
-          const inRange = homeAddresses.some(
-            (home) =>
-              distanceMeters(home.coords.lat, home.coords.lng, listing.latitude, listing.longitude) <=
-              distanceFilter * 1000,
-          );
-          if (inRange) {
-            color = 'orange';
-          }
+      popup = new maplibregl.Popup({ offset: 25, maxWidth: LISTING_POPUP_MAX_WIDTH }).setDOMContent(element);
+
+      // The stop list is only worth a request once the popup is actually opened, and it is the
+      // same for the whole group, so it is mounted once and survives paging.
+      popup.on('open', () => {
+        refit();
+
+        if (!transitMount || transitMount.dataset.mounted === 'true') return;
+        transitMount.dataset.mounted = 'true';
+
+        const unmount = mountPopupNode(
+          transitMount,
+          <NearbyStops lat={lat} lng={lng} limit={3} departureLimit={5} />,
+          language,
+        );
+        popupRoots.current.push(unmount);
+      });
+
+      let color = '#3FB1CE';
+      if (distanceFilter > 0 && homeAddresses.length > 0) {
+        const inRange = homeAddresses.some(
+          (home) => distanceMeters(home.coords.lat, home.coords.lng, lat, lng) <= distanceFilter * 1000,
+        );
+        if (inRange) {
+          color = 'orange';
         }
-
-        const marker = new maplibregl.Marker({ color })
-          .setLngLat([listing.longitude, listing.latitude])
-          .setPopup(popup)
-          .addTo(map.current);
-
-        markers.current.push(marker);
       }
+
+      const marker = new maplibregl.Marker({ color }).setLngLat([lng, lat]).setPopup(popup).addTo(map.current);
+
+      if (grouped.length > 1) {
+        // Says how many listings hide behind this pin, so a stack is recognisable before opening it.
+        const badge = document.createElement('span');
+        badge.className = 'map-marker-badge';
+        badge.textContent = String(grouped.length);
+        badge.title = t('map.popupSameAddress', { count: grouped.length });
+        marker.getElement().appendChild(badge);
+      }
+
+      markers.current.push(marker);
     });
-  }, [listings, priceRange, homeAddresses, distanceFilter]);
+  }, [listings, priceRange, homeAddresses, distanceFilter, commuteFilter]);
 
   return (
     <>
-      <Headline text={t('map.title')} />
+      {/* The address caveat is a standing fact about this page, not something that just happened,
+          so it reads as a line under the title rather than as an info Banner competing with the
+          map for attention every single visit. */}
+      <Headline text={t('map.title')} subtitle={t('map.onlyValidAddresses')} />
       <div className="map-view-container">
         {homeAddresses.length === 0 && (
           <Banner
@@ -395,107 +443,129 @@ export default function MapView() {
             description={
               <span>
                 {t('map.noHomeAddressBefore')}
-                <Link to="/userSettings">{t('map.noHomeAddressLink')}</Link>
+                <Link to="/settings/travel-time">{t('map.noHomeAddressLink')}</Link>
                 {t('map.noHomeAddressAfter')}
               </span>
             }
           />
         )}
 
-        <Banner
-          fullMode={true}
-          type="info"
-          bordered
-          closeIcon={null}
-          style={{ marginBottom: '8px' }}
-          description={t('map.onlyValidAddresses')}
-        />
-
         <div className="map-view-container__map-wrapper">
           <Map
-            mapContainerRef={mapContainer}
             style={style}
             show3dBuildings={show3dBuildings}
-            onMapReady={handleMapReady}
-          />
-
-          {/* Floating filter panel */}
-          <div className="map-view-container__floating-panel">
-            <div className="map-view-container__panel-row">
-              <Text size="small" strong style={{ color: '#8892a4' }}>
-                {t('map.filterJobLabel')}
-              </Text>
-              <Select
-                placeholder={t('map.filterJobPlaceholder')}
-                showClear
-                size="small"
-                onChange={(val) => setJobId(val)}
-                value={jobId}
-                style={{ width: 160 }}
-              >
-                {jobs?.map((j) => (
-                  <Select.Option key={j.id} value={j.id}>
-                    {j.name}
-                  </Select.Option>
-                ))}
-              </Select>
-            </div>
-
-            <div className="map-view-container__panel-row">
-              <Text size="small" strong style={{ color: '#8892a4' }}>
-                {t('map.filterDistanceLabel')}
-              </Text>
-              <Select
-                placeholder={t('map.filterDistanceNone')}
-                size="small"
-                onChange={(val) => setDistanceFilter(val)}
-                value={distanceFilter}
-                style={{ width: 100 }}
-              >
-                <Select.Option value={0}>{t('map.filterDistanceNone')}</Select.Option>
-                <Select.Option value={5}>5 km</Select.Option>
-                <Select.Option value={10}>10 km</Select.Option>
-                <Select.Option value={15}>15 km</Select.Option>
-                <Select.Option value={20}>20 km</Select.Option>
-                <Select.Option value={25}>25 km</Select.Option>
-              </Select>
-            </div>
-
-            <div className="map-view-container__panel-row">
-              <Text size="small" strong style={{ color: '#8892a4' }}>
-                {t('map.filterPriceLabel')}
-              </Text>
-              <div className="map-view-container__price-slider">
-                <div className="map__rangesliderLabels">
-                  <span>{priceRange[0]}</span>
-                  <span>{priceRange[1]}</span>
-                </div>
-                <RangeSlider min={0} max={getMaxPrice()} step={100} value={priceRange} onInput={handlePriceRange} />
+            showTransit={showTransit}
+            onControlsChange={handleControlsChange}
+            controlsMode="always"
+            transitExtra={
+              /* Only offered while the layer it belongs to is on, and indented under it: on its own
+                 it describes nothing. Unlike the switches around it, this one is a preference rather
+                 than a view state, so it is stored per user instead of living in the URL. */
+              <div className="map-panel__row map-panel__row--nested">
+                <Text size="small" className="map-panel__label">
+                  {t('map.filterTransitHover')}
+                </Text>
+                <Switch
+                  size="small"
+                  checked={transitHoverPopups}
+                  onChange={async (value) => {
+                    try {
+                      await actions.userSettings.setTransitHoverPopups(value);
+                    } catch (error) {
+                      Toast.error(errorMessage(error, t('map.filterTransitHoverError')));
+                    }
+                  }}
+                />
               </div>
-            </div>
+            }
+            onMapReady={handleMapReady}
+            panels={
+              /* Filters that only mean something for listings, so they stay with the view that owns
+                 them. In the map's own panel column, which is what carries them into the fullscreen
+                 overlay. */
+              <div className="map-panel">
+                <div className="map-panel__row">
+                  <Text size="small" strong className="map-panel__label">
+                    {t('map.filterJobLabel')}
+                  </Text>
+                  <Select
+                    placeholder={t('map.filterJobPlaceholder')}
+                    showClear
+                    size="small"
+                    onChange={(val) => setJobId(val)}
+                    value={jobId}
+                    style={{ width: 160 }}
+                  >
+                    {jobs?.map((j) => (
+                      <Select.Option key={j.id} value={j.id}>
+                        {j.name}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </div>
 
-            <div className="map-view-container__panel-row">
-              <Text size="small" strong style={{ color: '#8892a4' }}>
-                {t('map.filterStyleLabel')}
-              </Text>
-              <Select size="small" value={style} onChange={(val) => handleMapStyle(val)} style={{ width: 110 }}>
-                <Select.Option value="STANDARD">{t('map.filterStyleStandard')}</Select.Option>
-                <Select.Option value="SATELLITE">{t('map.filterStyleSatellite')}</Select.Option>
-              </Select>
-            </div>
+                <div className="map-panel__row">
+                  <Text size="small" strong className="map-panel__label">
+                    {t('map.filterDistanceLabel')}
+                  </Text>
+                  <Select
+                    placeholder={t('map.filterDistanceNone')}
+                    size="small"
+                    onChange={(val) => setDistanceFilter(val)}
+                    value={distanceFilter}
+                    style={{ width: 100 }}
+                  >
+                    <Select.Option value={0}>{t('map.filterDistanceNone')}</Select.Option>
+                    <Select.Option value={5}>5 km</Select.Option>
+                    <Select.Option value={10}>10 km</Select.Option>
+                    <Select.Option value={15}>15 km</Select.Option>
+                    <Select.Option value={20}>20 km</Select.Option>
+                    <Select.Option value={25}>25 km</Select.Option>
+                  </Select>
+                </div>
 
-            <div className="map-view-container__panel-row">
-              <Text size="small" strong style={{ color: '#8892a4' }}>
-                {t('map.filter3dBuildings')}
-              </Text>
-              <Switch
-                size="small"
-                checked={show3dBuildings}
-                onChange={(v) => setShow3dBuildings(v)}
-                disabled={style === 'SATELLITE'}
-              />
-            </div>
-          </div>
+                {/* Only offered once there is an address to measure a commute from. Unlike the
+                    distance ring above, which recolours pins, this one hides them: a commute
+                    ceiling is asked as "show me only what I could live with". */}
+                {homeAddresses.length > 0 && (
+                  <div className="map-panel__row">
+                    <Text size="small" strong className="map-panel__label">
+                      {t('map.filterCommuteLabel')}
+                    </Text>
+                    <Select
+                      placeholder={t('map.filterCommuteNone')}
+                      showClear
+                      size="small"
+                      onChange={(val) => setCommuteFilter(val ?? null)}
+                      value={commuteFilter}
+                      style={{ width: 150 }}
+                    >
+                      {COMMUTE_OPTIONS.map(({ mode, minutes }) =>
+                        minutes.map((max) => (
+                          <Select.Option key={`${mode}:${max}`} value={`${mode}:${max}`}>
+                            {t('listings.filterCommuteOption', { mode: t(`travelTime.mode.${mode}`), minutes: max })}
+                          </Select.Option>
+                        )),
+                      )}
+                    </Select>
+                  </div>
+                )}
+
+                <div className="map-panel__row">
+                  <Text size="small" strong className="map-panel__label">
+                    {t('map.filterPriceLabel')}
+                  </Text>
+                  <div className="map-view-container__price-slider">
+                    <div className="map__rangesliderLabels">
+                      <span>{priceRange[0]}</span>
+                      <span>{priceRange[1]}</span>
+                    </div>
+                    <RangeSlider min={0} max={getMaxPrice()} step={100} value={priceRange} onInput={handlePriceRange} />
+                  </div>
+                </div>
+              </div>
+            }
+          />
         </div>
 
         <ListingDeletionModal

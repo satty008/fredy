@@ -7,11 +7,20 @@ import React, { useEffect } from 'react';
 
 import InsufficientPermission from './components/permission/InsufficientPermission';
 import PermissionAwareRoute from './components/permission/PermissionAwareRoute';
-import GeneralSettings from './views/generalSettings/GeneralSettings';
+import SettingsLayout from './views/settings/SettingsLayout';
+import PreferencesPage from './views/settings/pages/PreferencesPage';
+import TravelTimePage from './views/settings/pages/TravelTimePage';
+import ListingDetailsPage from './views/settings/pages/ListingDetailsPage';
+import AdminLayout from './views/admin/AdminLayout';
+import SystemPage from './views/admin/pages/SystemPage';
+import ExecutionPage from './views/admin/pages/ExecutionPage';
+import BackupPage from './views/admin/pages/BackupPage';
+import DebugPage from './views/admin/pages/DebugPage';
 import JobMutation from './views/jobs/mutation/JobMutation';
 import UserMutator from './views/user/mutation/UserMutator';
 import { useActions, useSelector } from './services/state/store';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useBrowserNotifications } from './hooks/useBrowserNotifications';
+import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import Login from './views/login/Login';
 import Users from './views/user/Users';
 import Jobs from './views/jobs/Jobs';
@@ -44,53 +53,100 @@ for (const [path, mod] of Object.entries(semiLocaleModules)) {
   if (name) semiLocales[name] = mod.default ?? mod;
 }
 
+/**
+ * Carry the user id from the old edit URL over to the new one.
+ *
+ * `<Navigate to="/admin/users/edit/:userId">` would navigate to the literal string, so the
+ * parameter has to be read and put back.
+ *
+ * @returns {React.ReactElement}
+ */
+function LegacyUserEditRedirect() {
+  const { userId } = useParams();
+  return <Navigate to={`/admin/users/edit/${userId}`} replace />;
+}
+
+LegacyUserEditRedirect.displayName = 'LegacyUserEditRedirect';
+
 export default function FredyApp() {
   const location = useLocation();
   const actions = useActions();
   const [loading, setLoading] = React.useState(true);
-  /** userId the stores were filled for, so a re-run of the init effect does not refetch. */
+  /** userId the stores were actually filled for. Only set once the requests have landed. */
   const initializedFor = React.useRef(null);
+  /**
+   * Whether a fill is in flight.
+   *
+   * The effect runs twice on a hard refresh - once on mount, once when the user lands in the
+   * store - and without this the second run saw the ref already set, dropped `loading`, and
+   * rendered the route while the first run was still fetching. Anything that seeds its state
+   * from a store slice on mount (the job editor's twelve fields, view-mode toggles) then kept
+   * the empty values it saw and never recovered.
+   */
+  const initInFlight = React.useRef(false);
   const currentUser = useSelector((state) => state.user.currentUser);
   const versionUpdate = useSelector((state) => state.versionUpdate.versionUpdate);
   const settings = useSelector((state) => state.generalSettings.settings);
   const language = useSelector((state) => state.userSettings.settings.language);
 
+  useBrowserNotifications();
+
   useEffect(() => {
-    // The effect re-runs once the user lands in the store, and by then everything this does
-    // has already happened - including the /api/login/user request below.
+    // Already filled for this user: nothing to do. Checked against the ref, which is only set
+    // after the requests resolved, so this cannot short-circuit a fill that is still running.
     if (currentUser?.userId != null && initializedFor.current === currentUser.userId) {
       setLoading(false);
       return;
     }
 
     async function init() {
-      // Judge on the user this call just returned, not on the one in the render closure: on a
-      // hard refresh that closure is still null, so the guard below used to skip every load,
-      // drop `loading`, and render the whole app against empty stores. Anything that seeds
-      // component state from settings on mount (the finance calculator, view-mode toggles)
-      // then kept the blank values it saw.
-      const user = await actions.user.getCurrentUser();
-      const userId = user?.userId ?? null;
-
-      if (userId == null) {
-        initializedFor.current = null;
-        setLoading(false);
+      // A second run must not race the first one to `setLoading(false)`.
+      if (initInFlight.current) {
         return;
       }
+      initInFlight.current = true;
+      try {
+        // Judge on the user this call just returned, not on the one in the render closure: on a
+        // hard refresh that closure is still null, so the guard below used to skip every load,
+        // drop `loading`, and render the whole app against empty stores. Anything that seeds
+        // component state from settings on mount (the finance calculator, view-mode toggles)
+        // then kept the blank values it saw.
+        const user = await actions.user.getCurrentUser();
+        const userId = user?.userId ?? null;
 
-      if (initializedFor.current !== userId) {
-        initializedFor.current = userId;
-        await actions.provider.getProvider();
-        await actions.jobsData.getJobs();
-        await actions.jobsData.getSharableUserList();
-        await actions.notificationAdapter.getAdapter();
-        await actions.generalSettings.getGeneralSettings();
-        await actions.userSettings.getUserSettings();
-        await actions.versionUpdate.getVersionUpdate();
-        await actions.tracking.getTrackingPois();
+        if (userId == null) {
+          initializedFor.current = null;
+          setLoading(false);
+          return;
+        }
+
+        if (initializedFor.current !== userId) {
+          // These are independent of each other, so they go out together. Awaiting them one after
+          // the other meant nine serial round trips before the first pixel.
+          await Promise.all([
+            actions.provider.getProvider(),
+            actions.jobsData.getJobs(),
+            actions.jobsData.getSharableUserList(),
+            actions.notificationAdapter.getAdapter(),
+            actions.generalSettings.getGeneralSettings(),
+            actions.userSettings.getUserSettings(),
+            // Powers every finance surface; derived server-side so the browser holds no such math.
+            actions.finance.getProfileSummary(),
+          ]);
+          // Marked done only now: a route that seeds its state from the store on mount must not
+          // be rendered before the store actually holds it.
+          initializedFor.current = userId;
+          // Nothing in the first render depends on these two - the version banner and the
+          // tracking modal appear when they arrive - so they must not hold up the app.
+          // getVersionUpdate in particular reaches out to api.github.com.
+          actions.versionUpdate.getVersionUpdate();
+          actions.tracking.getTrackingPois();
+        }
+
+        setLoading(false);
+      } finally {
+        initInFlight.current = false;
       }
-
-      setLoading(false);
     }
 
     init();
@@ -149,33 +205,44 @@ export default function FredyApp() {
                   <Route path="/finance" element={<FinanceCalculator />} />
                   <Route path="/watchlistManagement" element={<WatchlistManagement />} />
 
-                  {/* Permission-aware routes */}
+                  {/* Settings that belong to whoever is signed in. No guard: they are theirs. */}
+                  <Route path="/settings" element={<SettingsLayout />}>
+                    <Route index element={<Navigate to="/settings/preferences" replace />} />
+                    <Route path="preferences" element={<PreferencesPage />} />
+                    <Route path="travel-time" element={<TravelTimePage />} />
+                    {/* Was "addresses" until the page grew from a list of places into how travel
+                        time to them is measured. */}
+                    <Route path="addresses" element={<Navigate to="/settings/travel-time" replace />} />
+                    <Route path="listings" element={<ListingDetailsPage />} />
+                  </Route>
+
+                  {/* Settings that belong to the instance. Guarded once, at the parent, so a new
+                      page cannot be added without inheriting the check. */}
                   <Route
-                    path="/users/new"
+                    path="/admin"
                     element={
                       <PermissionAwareRoute currentUser={currentUser}>
-                        <UserMutator />
+                        <AdminLayout />
                       </PermissionAwareRoute>
                     }
-                  />
-                  <Route
-                    path="/users/edit/:userId"
-                    element={
-                      <PermissionAwareRoute currentUser={currentUser}>
-                        <UserMutator />
-                      </PermissionAwareRoute>
-                    }
-                  />
-                  <Route
-                    path="/users"
-                    element={
-                      <PermissionAwareRoute currentUser={currentUser}>
-                        <Users />
-                      </PermissionAwareRoute>
-                    }
-                  />
-                  <Route path="/userSettings" element={<Navigate to="/generalSettings" replace />} />
-                  <Route path="/generalSettings" element={<GeneralSettings />} />
+                  >
+                    <Route index element={<Navigate to="/admin/system" replace />} />
+                    <Route path="system" element={<SystemPage />} />
+                    <Route path="execution" element={<ExecutionPage />} />
+                    <Route path="users" element={<Users />} />
+                    <Route path="users/new" element={<UserMutator />} />
+                    <Route path="users/edit/:userId" element={<UserMutator />} />
+                    <Route path="backup" element={<BackupPage />} />
+                    <Route path="debug" element={<DebugPage />} />
+                  </Route>
+
+                  {/* The addresses these used to live at. Kept so existing bookmarks and the links
+                      in older notification emails still land somewhere sensible. */}
+                  <Route path="/generalSettings" element={<Navigate to="/settings/preferences" replace />} />
+                  <Route path="/userSettings" element={<Navigate to="/settings/preferences" replace />} />
+                  <Route path="/users" element={<Navigate to="/admin/users" replace />} />
+                  <Route path="/users/new" element={<Navigate to="/admin/users/new" replace />} />
+                  <Route path="/users/edit/:userId" element={<LegacyUserEditRedirect />} />
 
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   {/* Catch-all: an authenticated user landing on an unknown path (e.g. still on

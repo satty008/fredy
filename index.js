@@ -20,6 +20,10 @@ import { ensureValidBinary } from './lib/services/ensureValidBinary.js';
 import { removeObsoleteProviders } from './lib/services/providers/providerCleanup.js';
 import { seedDemo, warnOnDefaultAdminPassword } from './lib/services/demo/demoService.js';
 import { initDemoCleanupCron } from './lib/services/crons/demo-cleanup-cron.js';
+import { initSessionCleanupCron } from './lib/services/crons/session-cleanup-cron.js';
+import { initListingRetentionCron } from './lib/services/crons/listing-retention-cron.js';
+import { initPriceTrackingCron } from './lib/services/crons/price-tracking-cron.js';
+import { initTravelTimeCron } from './lib/services/crons/travel-time-cron.js';
 
 // Ensure the CloakBrowser stealth Chromium binary is present and complete before
 // jobs run.  ensureValidBinary() also detects and auto-heals partial extractions
@@ -29,20 +33,37 @@ logger.info('Checking CloakBrowser binary...');
 await ensureValidBinary();
 logger.info('CloakBrowser binary ready.');
 
-//in the config, we store the path of the sqlite file, thus we must check if it is available
-const isConfigAccessible = await checkIfConfigIsAccessible();
-await SqliteConnection.init();
-
-// Load configuration before any other startup steps
-await refreshConfig();
-
-if (!isConfigAccessible) {
+// Configuration comes first, because everything below reads it - SqliteConnection.init() in
+// particular resolves the database directory from `sqlitepath`.
+//
+// This used to run one step later, after SqliteConnection.init(), which made a fresh Docker
+// container unstartable: the image ships no conf/config.json (`.dockerignore` excludes `conf/`, the
+// Dockerfile only creates an empty /conf volume), so the very first read threw ENOENT and the
+// create-with-defaults below never got the chance to run. A source checkout has the file committed,
+// which is why this only ever showed up in containers.
+if (!(await checkIfConfigIsAccessible())) {
   logger.error('Configuration exists, but is not accessible. Please check the file permission');
   process.exit(1);
 }
 
-// Run DB migrations once at startup and block until finished
-await runMigrations();
+try {
+  await refreshConfig();
+} catch (error) {
+  logger.error(error.message, error.cause ?? error);
+  process.exit(1);
+}
+
+await SqliteConnection.init();
+
+// Run DB migrations once at startup and block until finished. A failure here is fatal: continuing
+// would start the API and the schedulers against a schema that is missing the failed migration and
+// everything after it.
+try {
+  await runMigrations();
+} catch (err) {
+  logger.error('Database migration failed. Refusing to start.', err.cause ?? err);
+  process.exit(1);
+}
 
 const settings = await getSettings();
 
@@ -92,8 +113,16 @@ await initTrackerCron();
 initActiveCheckerCron();
 initGeocodingCron();
 await initDemoCleanupCron();
+await initSessionCleanupCron();
+await initListingRetentionCron();
+// Schedules only. Unlike the others this one is never run on start: it renders a browser page per
+// listing, and a restart is the worst moment to begin doing that.
+initPriceTrackingCron();
+// Same reasoning: schedule only. The sweep talks to a community routing service, and hammering it
+// every time an instance restarts is exactly the behaviour their usage policy asks projects to avoid.
+initTravelTimeCron();
 
 logger.info(`Started Fredy successfully. Ui can be accessed via http://localhost:${settings.port}`);
 
 // Initialize the lean Job Execution Service (schedules and bus listeners)
-initJobExecutionService({ providers, settings, intervalMs: INTERVAL });
+initJobExecutionService({ providers, intervalMs: INTERVAL });
