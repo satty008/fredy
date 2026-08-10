@@ -417,6 +417,24 @@ export const useFredyState = create(
               throw Exception;
             }
           },
+          /**
+           * Replace a listing's address and position with one the user picked.
+           *
+           * The route answers with the stored row, but the detail view is re-read through
+           * `getListing` anyway: only that endpoint adds the affordability verdict, and a listing
+           * in the store without it would drop the chip until the next navigation.
+           *
+           * @param {string} listingId
+           * @param {{address: string, latitude: number, longitude: number}} position
+           */
+          async setListingAddress(listingId, { address, latitude, longitude }) {
+            try {
+              await xhrPost(`/api/listings/${listingId}/address`, { address, latitude, longitude });
+            } catch (Exception) {
+              console.error(`Error while trying to set address for listing ${listingId}. Error:`, Exception);
+              throw Exception;
+            }
+          },
           async restoreListings(ids) {
             try {
               await xhrPost('/api/listings/restore', { ids });
@@ -437,17 +455,23 @@ export const useFredyState = create(
               set((state) => ({ userSettings: { ...state.userSettings, loaded: true } }));
             }
           },
-          async setNewsHash(newsHash) {
+          /**
+           * Remember the newest release this user has been shown the news for.
+           *
+           * @param {string} version
+           * @returns {Promise<void>}
+           */
+          async setNewsLastSeenVersion(version) {
             try {
-              await xhrPost('/api/user/settings/news-hash', { news_hash: newsHash });
+              await xhrPost('/api/user/settings/news-last-seen-version', { news_last_seen_version: version });
               set((state) => ({
                 userSettings: {
                   ...state.userSettings,
-                  settings: { ...state.userSettings.settings, news_hash: newsHash },
+                  settings: { ...state.userSettings.settings, news_last_seen_version: version },
                 },
               }));
             } catch (Exception) {
-              console.error('Error while trying to update news hash. Error:', Exception);
+              console.error('Error while trying to update the last seen news version. Error:', Exception);
               throw Exception;
             }
           },
@@ -507,6 +531,26 @@ export const useFredyState = create(
               }));
             } catch (Exception) {
               console.error('Error while trying to update provider details setting. Error:', Exception);
+              throw Exception;
+            }
+          },
+          /**
+           * Whether hovering a transport stop on the map opens its departure board.
+           *
+           * @param {boolean} enabled
+           * @returns {Promise<void>}
+           */
+          async setTransitHoverPopups(enabled) {
+            try {
+              await xhrPost('/api/user/settings/transit-hover-popups', { transit_hover_popups: enabled });
+              set((state) => ({
+                userSettings: {
+                  ...state.userSettings,
+                  settings: { ...state.userSettings.settings, transit_hover_popups: enabled },
+                },
+              }));
+            } catch (Exception) {
+              console.error('Error while trying to update the transit hover popups setting. Error:', Exception);
               throw Exception;
             }
           },

@@ -11,6 +11,8 @@ import * as timeService from '../../services/time/timeService.js';
 import StatusControl from '../listings/StatusControl.jsx';
 import ExternalListingLink from '../listings/ExternalListingLink.jsx';
 import AffordabilityChip from '../listings/AffordabilityChip.jsx';
+import PriceChangeBadge from '../listings/PriceChangeBadge.jsx';
+import CommuteBadge from '../transit/CommuteBadge.jsx';
 
 import './ListingsTable.less';
 import { useTranslation, useLocale } from '../../services/i18n/i18n.jsx';
@@ -77,6 +79,11 @@ const ListingsTable = ({
               <>
                 {formatEuroPrice(item.price)}
                 <AffordabilityChip verdict={item.affordabilityVerdict} dealType={item.dealType} />
+                <PriceChangeBadge
+                  price={item.price}
+                  previousPrice={item.previous_price}
+                  changedAt={item.price_changed_at}
+                />
               </>
             ) : (
               <span className="listingsTable__row__empty">---</span>
@@ -92,6 +99,9 @@ const ListingsTable = ({
             ) : (
               <span className="listingsTable__row__empty">---</span>
             )}
+            {/* Under the address rather than in a column of its own: it is the same question, and a
+                column would be empty for every listing that has not been routed yet. */}
+            <CommuteBadge travelTimes={item.travelTimes} />
           </div>
 
           <div className="listingsTable__row__meta">
