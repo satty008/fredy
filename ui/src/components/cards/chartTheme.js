@@ -138,6 +138,22 @@ export const CHART_COLORS = {
   FONT_UI,
 };
 
+/**
+ * Same traffic-light palette as VERDICT_COLORS, keyed by ai_verdict's own good/maybe/bad values.
+ * Getters for the same reason: the theme on screen decides the colour.
+ */
+export const AI_VERDICT_COLORS = {
+  get good() {
+    return token('--f-success', '#4bab86');
+  },
+  get maybe() {
+    return token('--f-warning', '#d8a34a');
+  },
+  get bad() {
+    return token('--f-error', '#d4707c');
+  },
+};
+
 let registered = false;
 
 /**

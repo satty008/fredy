@@ -15,6 +15,7 @@ import { useSelector } from '../../../services/state/store.js';
 import ListingPhoto from '../../listings/ListingPhoto.jsx';
 import StatusControl from '../../listings/StatusControl.jsx';
 import AffordabilityChip from '../../listings/AffordabilityChip.jsx';
+import AiVerdictBadge from '../../listings/AiVerdictBadge.jsx';
 import { rentIncludesCharges } from '../../../services/finance/rentBasis.js';
 import PriceChangeBadge from '../../listings/PriceChangeBadge.jsx';
 import PricePerSqmBadge from '../../listings/PricePerSqmBadge.jsx';
@@ -133,6 +134,7 @@ const ListingsGrid = ({
                   />
                 </div>
               )}
+              <AiVerdictBadge verdict={item.ai_verdict} />
 
               {/* In the hidden view onNavigate refuses to go anywhere, so the title is not a link
                   there either - a link that leads nowhere is worse than plain text. */}

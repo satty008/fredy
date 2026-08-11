@@ -12,6 +12,7 @@ import { formatEuroPrice } from '../../services/price/priceService.js';
 import * as timeService from '../../services/time/timeService.js';
 import StatusControl from '../listings/StatusControl.jsx';
 import AffordabilityChip from '../listings/AffordabilityChip.jsx';
+import AiVerdictBadge from '../listings/AiVerdictBadge.jsx';
 import { rentIncludesCharges } from '../../services/finance/rentBasis.js';
 import PriceChangeBadge from '../listings/PriceChangeBadge.jsx';
 import PricePerSqmBadge from '../listings/PricePerSqmBadge.jsx';
@@ -128,6 +129,7 @@ const ListingsTable = ({
             ) : (
               <span className="listingsTable__row__empty">---</span>
             )}
+            <AiVerdictBadge verdict={item.ai_verdict} />
           </div>
 
           <div className="listingsTable__row__address">
