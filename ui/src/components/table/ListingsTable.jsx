@@ -71,23 +71,23 @@ const ListingsTable = ({
             />
           </div>
 
-          <div className="listingsTable__row__title">
-            <AiVerdictBadge verdict={item.ai_verdict} />
-            <span className="listingsTable__row__title__text" title={item.title}>
-              {item.title}
-            </span>
+          <div className="listingsTable__row__title" title={item.title}>
+            {item.title}
           </div>
 
           <div className="listingsTable__row__price">
             {item.price ? (
               <>
-                {formatEuroPrice(item.price)}
-                <AffordabilityChip verdict={item.affordabilityVerdict} dealType={item.dealType} />
-                <PriceChangeBadge
-                  price={item.price}
-                  previousPrice={item.previous_price}
-                  changedAt={item.price_changed_at}
-                />
+                <div className="listingsTable__row__price__main">
+                  {formatEuroPrice(item.price)}
+                  <AffordabilityChip verdict={item.affordabilityVerdict} dealType={item.dealType} />
+                  <PriceChangeBadge
+                    price={item.price}
+                    previousPrice={item.previous_price}
+                    changedAt={item.price_changed_at}
+                  />
+                </div>
+                <AiVerdictBadge verdict={item.ai_verdict} />
               </>
             ) : (
               <span className="listingsTable__row__empty">---</span>
@@ -143,13 +143,9 @@ const ListingsTable = ({
               </button>
             </Tooltip>
             <ExternalListingLink href={item.link} label={t('listings.tooltipOriginalListing')} />
-            {/* Hidden below 560px (see ListingsTable.less): redundant there, since tapping the
-                row itself already calls onNavigate, and screen width is scarce enough on a phone
-                that dropping a same-purpose button is worth more than keeping the shortcut. */}
             <Tooltip content={t('listings.tooltipViewInFredy')}>
               <Button
                 size="small"
-                className="listingsTable__row__viewBtn"
                 icon={<IconEyeOpened />}
                 style={{ color: '#34d399' }}
                 theme="borderless"

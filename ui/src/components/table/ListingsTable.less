@@ -71,25 +71,12 @@
     }
 
     &__title {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      min-width: 0;
       font-weight: 600;
       font-size: @text-sm;
       color: @color-text;
-
-      // The verdict badge is a fixed-size flex item (shrink: 0 by default, since it has no flex
-      // basis set) so it always renders in full; only the title text truncates around it - before
-      // this, both sat in one nowrap/ellipsis block and the badge itself got clipped down to a
-      // sliver on narrow phones, which was the whole point of adding it in the first place.
-      &__text {
-        flex: 1 1 auto;
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     &__price {
@@ -97,12 +84,18 @@
       font-weight: 600;
       color: @color-success;
       display: flex;
-      align-items: center;
-      justify-content: flex-end;
+      flex-direction: column;
+      align-items: flex-end;
       gap: 4px;
       white-space: nowrap;
       text-align: right;
       font-variant-numeric: tabular-nums;
+
+      &__main {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
     }
 
     &__address {
@@ -189,25 +182,6 @@
 
       .listingsTable__row__price {
         display: none;
-      }
-
-      // Tapping the row already opens the listing, so this button duplicates that - dropping it
-      // here (not above 560px, where there's room to spare) claws back real width for the title,
-      // which is what actually needs it on a phone-width screen.
-      .listingsTable__row__viewBtn {
-        display: none;
-      }
-
-      // The Status control's text label ("Status" / "Applied" / ...) was the single widest thing
-      // in the actions cluster (~75px) - wider than the star, link, and delete buttons combined.
-      // Icon-only (just the chevron, still fully clickable/functional) below 560px so the title
-      // gets a fair share of a phone-width row instead of being squeezed to a couple of letters.
-      .listingsTable__row__actions .status-btn .semi-button-content-left {
-        display: none;
-      }
-
-      .listingsTable__row__actions .status-btn.status-btn--compact {
-        padding: 0 6px !important;
       }
     }
   }

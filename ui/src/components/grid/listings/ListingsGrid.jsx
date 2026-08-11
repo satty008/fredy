@@ -100,22 +100,22 @@ const ListingsGrid = ({
           </div>
 
           <div className="listingsGrid__card__body">
-            <div className="listingsGrid__card__title">
-              <AiVerdictBadge verdict={item.ai_verdict} />
-              <span className="listingsGrid__card__title__text" title={item.title}>
-                {item.title}
-              </span>
+            <div className="listingsGrid__card__title" title={item.title}>
+              {item.title}
             </div>
             {item.price && (
               <div className="listingsGrid__card__price">
-                <IconCart size="small" />
-                {item.price}
-                <AffordabilityChip verdict={item.affordabilityVerdict} dealType={item.dealType} />
-                <PriceChangeBadge
-                  price={item.price}
-                  previousPrice={item.previous_price}
-                  changedAt={item.price_changed_at}
-                />
+                <div className="listingsGrid__card__price__main">
+                  <IconCart size="small" />
+                  {item.price}
+                  <AffordabilityChip verdict={item.affordabilityVerdict} dealType={item.dealType} />
+                  <PriceChangeBadge
+                    price={item.price}
+                    previousPrice={item.previous_price}
+                    changedAt={item.price_changed_at}
+                  />
+                </div>
+                <AiVerdictBadge verdict={item.ai_verdict} />
               </div>
             )}
             {item.address && (

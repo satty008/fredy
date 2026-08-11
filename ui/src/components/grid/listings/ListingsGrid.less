@@ -109,23 +109,12 @@
   }
 
   &__title {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    min-width: 0;
     font-weight: 700;
     font-size: @text-sm;
     color: @color-text;
-
-    // Same "badge never clips, only the text does" split as ListingsTable.less - keeps the
-    // verdict badge fully readable instead of competing with the title for one shared ellipsis.
-    &__text {
-      flex: 1 1 auto;
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__price {
@@ -133,8 +122,15 @@
     font-weight: 600;
     color: @color-success;
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-start;
     gap: 4px;
+
+    &__main {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
   }
 
   &__meta {
