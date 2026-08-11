@@ -71,12 +71,25 @@
     }
 
     &__title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
       font-weight: 600;
       font-size: @text-sm;
       color: @color-text;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+
+      // The verdict badge is a fixed-size flex item (shrink: 0 by default, since it has no flex
+      // basis set) so it always renders in full; only the title text truncates around it - before
+      // this, both sat in one nowrap/ellipsis block and the badge itself got clipped down to a
+      // sliver on narrow phones, which was the whole point of adding it in the first place.
+      &__text {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
     }
 
     &__price {
@@ -175,6 +188,13 @@
       grid-template-columns: 24px 56px 1fr auto;
 
       .listingsTable__row__price {
+        display: none;
+      }
+
+      // Tapping the row already opens the listing, so this button duplicates that - dropping it
+      // here (not above 560px, where there's room to spare) claws back real width for the title,
+      // which is what actually needs it on a phone-width screen.
+      .listingsTable__row__viewBtn {
         display: none;
       }
     }

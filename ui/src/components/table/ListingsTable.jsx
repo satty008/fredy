@@ -71,9 +71,11 @@ const ListingsTable = ({
             />
           </div>
 
-          <div className="listingsTable__row__title" title={item.title}>
+          <div className="listingsTable__row__title">
             <AiVerdictBadge verdict={item.ai_verdict} />
-            {item.title}
+            <span className="listingsTable__row__title__text" title={item.title}>
+              {item.title}
+            </span>
           </div>
 
           <div className="listingsTable__row__price">
@@ -141,9 +143,13 @@ const ListingsTable = ({
               </button>
             </Tooltip>
             <ExternalListingLink href={item.link} label={t('listings.tooltipOriginalListing')} />
+            {/* Hidden below 560px (see ListingsTable.less): redundant there, since tapping the
+                row itself already calls onNavigate, and screen width is scarce enough on a phone
+                that dropping a same-purpose button is worth more than keeping the shortcut. */}
             <Tooltip content={t('listings.tooltipViewInFredy')}>
               <Button
                 size="small"
+                className="listingsTable__row__viewBtn"
                 icon={<IconEyeOpened />}
                 style={{ color: '#34d399' }}
                 theme="borderless"

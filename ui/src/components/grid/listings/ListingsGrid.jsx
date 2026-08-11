@@ -100,9 +100,11 @@ const ListingsGrid = ({
           </div>
 
           <div className="listingsGrid__card__body">
-            <div className="listingsGrid__card__title" title={item.title}>
+            <div className="listingsGrid__card__title">
               <AiVerdictBadge verdict={item.ai_verdict} />
-              {item.title}
+              <span className="listingsGrid__card__title__text" title={item.title}>
+                {item.title}
+              </span>
             </div>
             {item.price && (
               <div className="listingsGrid__card__price">
