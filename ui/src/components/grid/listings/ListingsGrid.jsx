@@ -18,6 +18,7 @@ import * as timeService from '../../../services/time/timeService.js';
 import StatusControl from '../../listings/StatusControl.jsx';
 import ExternalListingLink from '../../listings/ExternalListingLink.jsx';
 import AffordabilityChip from '../../listings/AffordabilityChip.jsx';
+import AiVerdictBadge from '../../listings/AiVerdictBadge.jsx';
 import PriceChangeBadge from '../../listings/PriceChangeBadge.jsx';
 import CommuteBadge from '../../transit/CommuteBadge.jsx';
 
@@ -100,6 +101,7 @@ const ListingsGrid = ({
 
           <div className="listingsGrid__card__body">
             <div className="listingsGrid__card__title" title={item.title}>
+              <AiVerdictBadge verdict={item.ai_verdict} />
               {item.title}
             </div>
             {item.price && (

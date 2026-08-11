@@ -53,6 +53,13 @@ export const VERDICT_COLORS = {
   unaffordable: '#fb7185',
 };
 
+/** Same traffic-light palette as VERDICT_COLORS, keyed by ai_verdict's own good/maybe/bad values. */
+export const AI_VERDICT_COLORS = {
+  good: '#34d399',
+  maybe: '#fbbf24',
+  bad: '#fb7185',
+};
+
 export const CHART_COLORS = { ACCENT, GRID, GRID_BRIGHT, MUTED, TEXT, ELEVATED, FONT_UI, FONT_MONO };
 
 let registered = false;
