@@ -33,15 +33,17 @@ export default function AffordabilityChip({ verdict, dealType }) {
     return null;
   }
 
-  // A non-null verdict means the matching half of the profile exists, so the threshold quoted
-  // in the tooltip is always there to read.
+  // A non-null verdict means the matching half of the profile exists on the server, but the two
+  // load independently on the client (the verdict rides in with the listing row, thresholds come
+  // from a separate finance-summary fetch) - so thresholds.rent/buy can still briefly be null here
+  // even when verdict isn't. Optional-chain the read below rather than assuming they land together.
   const isRental = dealType === 'rent';
   const color = VERDICT_COLORS[verdict];
 
   return (
     <Tooltip
       content={t(`listings.${isRental ? 'rentAffordabilityTooltip' : 'affordabilityTooltip'}.${verdict}`, {
-        price: formatEuro(isRental ? thresholds.rent.affordableMaxRent : thresholds.buy.affordableMaxPrice, locale),
+        price: formatEuro(isRental ? thresholds.rent?.affordableMaxRent : thresholds.buy?.affordableMaxPrice, locale),
       })}
       position="top"
     >

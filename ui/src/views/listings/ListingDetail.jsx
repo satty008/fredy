@@ -503,7 +503,7 @@ export default function ListingDetail() {
         `listings.${isRental ? 'rentAffordabilityTooltip' : 'affordabilityTooltip'}.${affordabilityVerdict}`,
         {
           price: formatEuro(
-            isRental ? financeThresholds.rent.affordableMaxRent : financeThresholds.buy.affordableMaxPrice,
+            isRental ? financeThresholds.rent?.affordableMaxRent : financeThresholds.buy?.affordableMaxPrice,
             locale,
           ),
         },
