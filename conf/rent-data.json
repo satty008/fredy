@@ -1,5 +1,5 @@
 {
-  "_comment": "Average cold rent (Kaltmiete) per m2/month, used to estimate gross rental yield for the minRoiPercent job filter. Re-derived in July 2026 from sourced price-per-sqm x reported gross-yield/Mietspiegel data across two research passes (see the 'Where to point Fredy' research artifact). A third pass (also July 2026) added district/area-level breakdowns for the active Invest-job cities, sourced from official Mietspiegel documents where available (Aalen, Villingen-Schwenningen: real Wohnlage-zone data extracted directly from the source PDF; Offenburg, Fulda: official citywide average only, no area breakdown exists in their Mietspiegel methodology) and from a market-rate aggregator (mietspiegeltabelle.de, 'VALUE Marktdatenbank') for Dresden/Leipzig/Moenchengladbach, since their official Mietspiegel PDFs could not be extracted (scanned/binary PDFs) - those three cities' area figures reflect current asking rent, not the legally-defined (lower) Mietspiegel average, which is arguably more relevant for a new landlord's achievable rent anyway. Schwaebisch Hall/Walldorf/Wiesloch have no official Mietspiegel at all; their figures are unofficial portal averages, flagged accordingly. Re-check periodically (immoscout24 Mietspiegel, empirica, local Gutachterausschuss) and edit this file freely - Fredy reloads it automatically on change.",
+  "_comment": "Average cold rent (Kaltmiete) per m2/month, used to estimate gross rental yield for the minRoiPercent job filter. Re-derived in July 2026 from sourced price-per-sqm x reported gross-yield/Mietspiegel data across two research passes (see the 'Where to point Fredy' research artifact). A third pass (also July 2026) added district/area-level breakdowns for the active Invest-job cities, sourced from official Mietspiegel documents where available (Aalen, Villingen-Schwenningen: real Wohnlage-zone data extracted directly from the source PDF; Offenburg, Fulda: official citywide average only, no area breakdown exists in their Mietspiegel methodology) and from a market-rate aggregator (mietspiegeltabelle.de, 'VALUE Marktdatenbank') for Dresden/Leipzig/Moenchengladbach, since their official Mietspiegel PDFs could not be extracted (scanned/binary PDFs) - those three cities' area figures reflect current asking rent, not the legally-defined (lower) Mietspiegel average, which is arguably more relevant for a new landlord's achievable rent anyway. Schwaebisch Hall/Walldorf/Wiesloch have no official Mietspiegel at all; their figures are unofficial portal averages, flagged accordingly. A fourth pass (August 2026) added the towns actually turning up in the '1.Invest 200k - Nordschwarzwald' and '2.Invest 200k- (Umkreis Vaihingen/Enz)' jobs (picked by frequency in real listing results, not by geography alone), sourced from live market-data aggregators (miet-check.de, mietspiegeltabelle.de, ohne-makler.net, immoportal.com, immoreport.de, miete-aktuell.de - current asking-rent figures, same 'Sollmiete over blended Mietspiegel' reasoning as the third pass) since wohnungsboerse.net (used in earlier passes) has gone dead and now redirects to ImmoScout24's homepage. Ludwigsburg is a known outlier worth flagging: its official city Mietspiegel gives ~10.66/m2 (existing-tenant blended average) vs 14.73/m2 here (current asking rent) - the gap is unusually wide for this pass, kept as asking rent for consistency with the rest of the file's Sollmiete framing, but worth a gut-check against a real listing before trusting it heavily. Schoemberg here is the Landkreis Calw one (near Bad Wildbad), not the unrelated Zollernalbkreis Schoemberg - a real substring-matching ambiguity if a future job ever surfaces listings from the other one. Re-check periodically (immoscout24 Mietspiegel, empirica, local Gutachterausschuss) and edit this file freely - Fredy reloads it automatically on change.",
   "defaultRentPerSqm": 9,
   "cities": {
     "münster": 13,
@@ -247,6 +247,33 @@
         "grünau-siedlung": 6.19
       }
     },
+
+    "vaihingen an der enz": 12.83,
+    "ludwigsburg": 14.73,
+    "leonberg": 14.45,
+    "ditzingen": 14.7,
+    "sachsenheim": 13.36,
+    "bietigheim-bissingen": 13.98,
+    "freiberg am neckar": 13.22,
+    "eppingen": 11,
+    "lauffen am neckar": 12.27,
+    "asperg": 15,
+
+    "bad wildbad": 9.87,
+    "bad herrenalb": 10.62,
+    "bad liebenzell": 11.17,
+    "gernsbach": 10.78,
+    "baiersbronn": 9.78,
+    "calw": 11.56,
+    "schömberg": 9.75,
+    "schoemberg": 9.75,
+    "baden-baden": 12.04,
+    "forbach": 9.37,
+    "haiterbach": 11.03,
+    "nagold": 12.14,
+    "ebhausen": 11.26,
+    "straubenhardt": 10.83,
+    "keltern": 10.76,
 
     "mönchengladbach": {
       "default": 9.9,
