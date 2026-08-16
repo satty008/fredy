@@ -13,7 +13,6 @@ import {
   IconSidebar,
   IconServerStroked,
 } from '@douyinfe/semi-icons';
-import IconEuro from '../icons/IconEuro.jsx';
 import logoWhite from '../../assets/logo_white.png';
 import heart from '../../assets/heart.png';
 import Logout from '../logout/Logout.jsx';
@@ -24,15 +23,24 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import './Navigate.less';
 import { useScreenWidth } from '../../hooks/screenWidth.js';
 import { useTranslation } from '../../services/i18n/i18n.jsx';
-import { useSelector } from '../../services/state/store';
+import { navTreeFor, resolveActiveKey } from './navModel.js';
+
+/**
+ * The icon each top-level entry carries. Keyed by nav key so the tree itself stays free of JSX.
+ * @type {Record<string, React.ReactElement>}
+ */
+const ICONS = {
+  '/dashboard': <IconHistogram />,
+  '/jobs': <IconTerminal />,
+  listings: <IconStar />,
+  '/settings': <IconSetting />,
+  '/admin': <IconServerStroked />,
+};
 
 export default function Navigation({ isAdmin }) {
   const t = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  // The demo instance is a showcase, not an installation someone maintains - asking its
-  // visitors for money would be begging on someone else's behalf.
-  const settings = useSelector((state) => state.generalSettings.settings);
 
   const width = useScreenWidth();
   const [collapsed, setCollapsed] = useState(width <= 850);
@@ -43,80 +51,33 @@ export default function Navigation({ isAdmin }) {
     }
   }, [width]);
 
-  const items = [
-    { itemKey: '/dashboard', text: t('nav.dashboard'), icon: <IconHistogram /> },
-    { itemKey: '/jobs', text: t('nav.jobs'), icon: <IconTerminal /> },
-    {
-      itemKey: 'listings',
-      text: t('nav.listings'),
-      icon: <IconStar />,
-      items: [
-        { itemKey: '/listings', text: t('nav.listingsOverview') },
-        { itemKey: '/map', text: t('nav.mapView') },
-        { itemKey: '/listings/watchlist', text: t('nav.watchlist') },
-      ],
-    },
-    { itemKey: '/finance', text: t('nav.finance'), icon: <IconEuro /> },
-  ];
+  const tree = navTreeFor(isAdmin);
 
-  // Two groups, not one. Which group a page sits in is the answer to "does this affect anyone but
-  // me", and it is an answer the old single Settings group could not give: an ordinary user and an
-  // administrator saw the same entry and had to open it to find out what was behind it.
-  items.push({
-    itemKey: 'settings',
-    text: t('nav.settings'),
-    icon: <IconSetting />,
-    items: [
-      { itemKey: '/settings/preferences', text: t('nav.preferences') },
-      { itemKey: '/settings/travel-time', text: t('nav.travelTime') },
-      { itemKey: '/settings/listings', text: t('nav.listingDetails') },
-    ],
-  });
-
-  if (isAdmin) {
-    items.push({
-      itemKey: 'administration',
-      text: t('nav.administration'),
-      icon: <IconServerStroked />,
-      items: [
-        { itemKey: '/admin/system', text: t('nav.system') },
-        { itemKey: '/admin/execution', text: t('nav.execution') },
-        { itemKey: '/admin/users', text: t('nav.userManagement') },
-        { itemKey: '/admin/backup', text: t('nav.backup') },
-        { itemKey: '/admin/debug', text: t('nav.debug') },
-      ],
-    });
-  }
-
-  function parsePathName(name) {
-    // Collect every leaf itemKey that looks like a route (starts with '/').
-    // Prefer the longest exact-prefix match so nested routes like
-    // '/listings/watchlist' resolve to themselves instead of being collapsed
-    // to '/listings'.
-    const allKeys = [];
-    const collect = (nodes) => {
-      for (const n of nodes) {
-        if (typeof n.itemKey === 'string' && n.itemKey.startsWith('/')) allKeys.push(n.itemKey);
-        if (Array.isArray(n.items)) collect(n.items);
-      }
-    };
-    collect(items);
-    const longestMatch = allKeys
-      .filter((k) => name === k || name.startsWith(k + '/'))
-      .sort((a, b) => b.length - a.length)[0];
-    if (longestMatch) return longestMatch;
-    const split = name.split('/').filter((s) => s.length !== 0);
-    return '/' + split[0];
-  }
+  /**
+   * The tree in the shape Semi's `<Nav>` wants: translated labels, icons attached, groups nested.
+   *
+   * @param {import('./navModel.js').NavNode[]} nodes
+   * @returns {Object[]}
+   */
+  const toNavItems = (nodes) =>
+    nodes.map((node) => ({
+      itemKey: node.key,
+      text: t(node.labelKey),
+      // Only top-level entries carry an icon. Sub-items are read as a list under the one they
+      // belong to, and a single marked entry among unmarked siblings reads as a different kind of
+      // thing rather than as one of them.
+      icon: ICONS[node.key],
+      ...(node.children ? { items: toNavItems(node.children) } : {}),
+    }));
 
   const sidebarWidth = collapsed ? '60px' : '220px';
 
   return (
     <Nav
       style={{ height: '100%', width: sidebarWidth, minWidth: sidebarWidth, maxWidth: sidebarWidth }}
-      items={items}
+      items={toNavItems(tree)}
       isCollapsed={collapsed}
-      selectedKeys={[parsePathName(location.pathname)]}
+      selectedKeys={[resolveActiveKey(tree, location.pathname)]}
       onClick={({ itemKey }) => {
         // Use onClick (fires on every click) instead of onSelect (skips the
         // already-selected item) so clicking e.g. "Jobs" while on a nested
@@ -139,11 +100,12 @@ export default function Navigation({ isAdmin }) {
           <div className="navigate__footer-news">
             <NewsHistory collapsed={collapsed} />
           </div>
-          {!settings.demoMode && (
-            <div className="navigate__footer-donate">
-              <Donate collapsed={collapsed} />
-            </div>
-          )}
+          {/* Shown on the demo instance too. The demo is where most people meet Fredy for the
+              first time, so hiding the one place it asks for support removed it from exactly the
+              audience that has just seen what the project does. */}
+          <div className="navigate__footer-donate">
+            <Donate collapsed={collapsed} />
+          </div>
           <div className={`navigate__footer-actions${collapsed ? ' navigate__footer-actions--collapsed' : ''}`}>
             <Logout text={!collapsed} />
             <button

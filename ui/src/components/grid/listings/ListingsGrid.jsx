@@ -150,7 +150,7 @@ const ListingsGrid = ({
               <Button
                 size="small"
                 icon={<IconEyeOpened />}
-                style={{ color: '#34d399' }}
+                style={{ color: '#4bab86' }}
                 theme="borderless"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -167,7 +167,7 @@ const ListingsGrid = ({
                       <IconDelete />
                     </span>
                   }
-                  style={{ color: '#34d399' }}
+                  style={{ color: '#4bab86' }}
                   theme="borderless"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -181,7 +181,7 @@ const ListingsGrid = ({
                 <Button
                   size="small"
                   icon={<IconDelete />}
-                  style={{ color: '#fb7185' }}
+                  style={{ color: '#d4707c' }}
                   theme="borderless"
                   onClick={(e) => {
                     e.stopPropagation();
