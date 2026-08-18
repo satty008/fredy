@@ -53,6 +53,7 @@ import ListingDeletionModal from '../../components/ListingDeletionModal.jsx';
 import Headline from '../../components/headline/Headline.jsx';
 import IconEuro from '../../components/icons/IconEuro.jsx';
 import StatusControl from '../../components/listings/StatusControl.jsx';
+import ImmocockpitVerdictBadge from '../../components/listings/ImmocockpitVerdictBadge.jsx';
 import ListingFinanceCard from './components/ListingFinanceCard.jsx';
 import PriceHistoryChart from './components/PriceHistoryChart.jsx';
 import NearbyStops from '../../components/transit/NearbyStops.jsx';
@@ -645,14 +646,17 @@ export default function ListingDetail() {
                 <Title heading={4} className="listing-detail__notes-title">
                   {t('listing.detail.notesTitle')}
                 </Title>
-                {listing.ai_verdict && (
-                  <Tag
-                    color={listing.ai_verdict === 'good' ? 'green' : listing.ai_verdict === 'maybe' ? 'amber' : 'red'}
-                    shape="circle"
-                  >
-                    {t(`listings.filterAiVerdict${listing.ai_verdict[0].toUpperCase()}${listing.ai_verdict.slice(1)}`)}
-                  </Tag>
-                )}
+                <Space>
+                  {listing.ai_verdict && (
+                    <Tag
+                      color={listing.ai_verdict === 'good' ? 'green' : listing.ai_verdict === 'maybe' ? 'amber' : 'red'}
+                      shape="circle"
+                    >
+                      {t(`listings.filterAiVerdict${listing.ai_verdict[0].toUpperCase()}${listing.ai_verdict.slice(1)}`)}
+                    </Tag>
+                  )}
+                  <ImmocockpitVerdictBadge verdict={listing.immocockpitVerdict} analysis={listing.immocockpitAnalysis} />
+                </Space>
               </div>
               <TextArea
                 value={notesDraft}

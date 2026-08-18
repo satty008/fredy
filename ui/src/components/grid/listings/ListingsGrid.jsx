@@ -20,6 +20,7 @@ import StatusControl from '../../listings/StatusControl.jsx';
 import ExternalListingLink from '../../listings/ExternalListingLink.jsx';
 import AffordabilityChip from '../../listings/AffordabilityChip.jsx';
 import AiVerdictBadge from '../../listings/AiVerdictBadge.jsx';
+import ImmocockpitVerdictBadge from '../../listings/ImmocockpitVerdictBadge.jsx';
 import PriceChangeBadge from '../../listings/PriceChangeBadge.jsx';
 import CommuteBadge from '../../transit/CommuteBadge.jsx';
 
@@ -117,6 +118,7 @@ const ListingsGrid = ({
                   />
                 </div>
                 <AiVerdictBadge verdict={item.ai_verdict} />
+                <ImmocockpitVerdictBadge verdict={item.immocockpitVerdict} />
               </div>
             )}
             {item.address && (
