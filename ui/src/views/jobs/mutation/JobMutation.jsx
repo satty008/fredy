@@ -11,10 +11,11 @@ import NotificationChannelTable from '../../../components/table/NotificationChan
 import ProviderTable from '../../../components/table/ProviderTable';
 import ProviderMutator from './components/provider/ProviderMutator';
 import AreaFilter from './components/areaFilter/AreaFilter';
+import CommuteFilter from './components/CommuteFilter.jsx';
 import Headline from '../../../components/headline/Headline';
 import { useActions, useSelector } from '../../../services/state/store';
 import { xhrPost, errorMessage } from '../../../services/xhr';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router';
 import { Input, Switch, Button, TagInput, Toast, Select, Banner, Collapse, Tooltip } from '@douyinfe/semi-ui-19';
 import './JobMutation.less';
 import { SegmentPart } from '../../../components/segment/SegmentPart';
@@ -77,6 +78,7 @@ export default function JobMutator() {
   const defaultShareWithUsers = sourceJob?.shared_with_user ?? [];
   const defaultSpatialFilter = sourceJob?.spatialFilter || null;
   const defaultSpecFilter = sourceJob?.specFilter || null;
+  const defaultCommuteFilter = sourceJob?.commuteFilter || null;
   // Deliberately not defaulted for a new job: the user has to say what they are looking for,
   // because it decides which half of their finance profile applies to everything this job finds.
   const defaultDealType = sourceJob?.dealType || null;
@@ -93,6 +95,7 @@ export default function JobMutator() {
   const [enabled, setEnabled] = useState(defaultEnabled);
   const [spatialFilter, setSpatialFilter] = useState(defaultSpatialFilter);
   const [specFilter, setSpecFilter] = useState(defaultSpecFilter);
+  const [commuteFilter, setCommuteFilter] = useState(defaultCommuteFilter);
   const [dealType, setDealType] = useState(defaultDealType);
   /** Whether the value in the deal type field was guessed rather than chosen. */
   const [dealTypeWasInferred, setDealTypeWasInferred] = useState(false);
@@ -136,6 +139,7 @@ export default function JobMutator() {
     if (draft.enabled !== undefined) setEnabled(draft.enabled);
     if (draft.spatialFilter !== undefined) setSpatialFilter(draft.spatialFilter);
     if (draft.specFilter !== undefined) setSpecFilter(draft.specFilter);
+    if (draft.commuteFilter !== undefined) setCommuteFilter(draft.commuteFilter);
     setDraftRestored(true);
   }, [draftId]);
 
@@ -153,6 +157,7 @@ export default function JobMutator() {
       enabled,
       spatialFilter,
       specFilter,
+      commuteFilter,
     });
   }, [
     draftId,
@@ -165,6 +170,7 @@ export default function JobMutator() {
     enabled,
     spatialFilter,
     specFilter,
+    commuteFilter,
   ]);
 
   // The deal type decides which half of the finance profile applies to everything this job finds,
@@ -199,6 +205,7 @@ export default function JobMutator() {
     setEnabled(defaultEnabled);
     setSpatialFilter(defaultSpatialFilter);
     setSpecFilter(defaultSpecFilter);
+    setCommuteFilter(defaultCommuteFilter);
   };
 
   const leaveForm = () => {
@@ -228,7 +235,7 @@ export default function JobMutator() {
 
   // What the collapsed section holds, so it does not have to be opened to find out.
   const refinementSummary = summariseJobRefinements(
-    { blacklist, specFilter, spatialFilter, shareWithUsers, enabled },
+    { blacklist, specFilter, spatialFilter, commuteFilter, shareWithUsers, enabled },
     { t, formatPrice: (value) => formatEuro(value, locale) },
   );
 
@@ -248,6 +255,7 @@ export default function JobMutator() {
         blacklist,
         spatialFilter,
         specFilter,
+        commuteFilter,
         dealType,
         enabled,
         jobId: jobToBeEdit?.id || null,
@@ -481,6 +489,18 @@ export default function JobMutator() {
                   </div>
                 ))}
               </div>
+            </SegmentPart>
+
+            {/* After the price and size criteria and before the blacklist: it is the same kind of
+                statement about what this search will accept, and it is the one that needs the
+                travel times, which only exist once a listing has been found. */}
+            <SegmentPart
+              Icon={IconFilter}
+              name={t('jobs.mutation.sectionCommuteFilter')}
+              helpText={t('jobs.mutation.commuteFilterHelp')}
+              helpMode="popover"
+            >
+              <CommuteFilter value={commuteFilter} onChange={setCommuteFilter} />
             </SegmentPart>
 
             <SegmentPart

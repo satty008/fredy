@@ -14,6 +14,7 @@ import {
   IconEyeOpened,
 } from '@douyinfe/semi-icons';
 import no_image from '../../../assets/no_image.png';
+import { formatEuroPrice } from '../../../services/price/priceService.js';
 import * as timeService from '../../../services/time/timeService.js';
 import StatusControl from '../../listings/StatusControl.jsx';
 import ExternalListingLink from '../../listings/ExternalListingLink.jsx';
@@ -107,7 +108,7 @@ const ListingsGrid = ({
               <div className="listingsGrid__card__price">
                 <div className="listingsGrid__card__price__main">
                   <IconCart size="small" />
-                  {item.price}
+                  {formatEuroPrice(item.price, locale)}
                   <AffordabilityChip verdict={item.affordabilityVerdict} dealType={item.dealType} />
                   <PriceChangeBadge
                     price={item.price}
@@ -130,7 +131,7 @@ const ListingsGrid = ({
             </div>
             {/* Compact on purpose: on a card the commute is a number you scan past twenty others,
                 not something you read. The detail page shows the full picture. */}
-            <CommuteBadge travelTimes={item.travelTimes} />
+            <CommuteBadge travelTimes={item.travelTimes} jobId={item.job_id} />
             <div className="listingsGrid__card__provider">{timeService.format(item.created_at, false, locale)}</div>
           </div>
 

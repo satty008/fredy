@@ -110,6 +110,105 @@ async function downloadImmoscoutFixtures(mobileApiUrl) {
 }
 
 /**
+ * Cut the exposé down to the script tag the provider reads its description out of.
+ *
+ * The full page is ~700 KB of micro-frontend bootstrap around it. Keeping the tag on its own gives
+ * the server-state path a fixture that stays small enough to read in a diff, and the marker in the
+ * body proves that path is preferred over the rendered markup - no exposé calls itself a fallback.
+ *
+ * @param {string} detailHtml the exposé page source
+ * @param {string} exposeUrl the url it was downloaded from, for the fixture's header comment
+ * @returns {Promise<void>}
+ */
+async function writeImmoweltServerState(detailHtml, exposeUrl) {
+  const open = detailHtml.indexOf('<script id="__UFRN_LIFECYCLE_SERVERREQUEST__">');
+  const close = open < 0 ? -1 : detailHtml.indexOf('</script>', open);
+  if (close < 0) {
+    console.warn('  Exposé carries no __UFRN_LIFECYCLE_SERVERREQUEST__ tag - skipping server state fixture');
+    return;
+  }
+
+  const fixture = `<!doctype html>
+<!--
+  Trimmed capture of ${exposeUrl}, kept for the server-state path of \`extractExposeDescription\`.
+
+  Everything but the \`__UFRN_LIFECYCLE_SERVERREQUEST__\` script tag is dropped: that tag is the one
+  the provider reads and it is here verbatim, so a change to immowelt's state shape breaks this
+  test the way it breaks production. The paragraph in the body is not from the capture - it is a
+  marker that proves the server state is preferred over the rendered markup, because no exposé
+  describes itself as a fallback.
+-->
+<html lang="de">
+  <head>
+    ${detailHtml.slice(open, close + '</script>'.length)}
+  </head>
+  <body>
+    <div data-testid="cdp-main-description-expandable-text">DOM FALLBACK MARKER</div>
+  </body>
+</html>
+`;
+
+  await writeFile(path.join(FIXTURES_DIR, 'immowelt_detail_serverstate.html'), fixture, 'utf-8');
+  console.log('  Saved immowelt_detail_serverstate.html');
+}
+
+/**
+ * Immowelt serves both its result list and its exposé from behind DataDome, so nothing here can be
+ * fetched with a plain `fetch` - the provider's own transport, which runs inside the browser page,
+ * is used instead. The three fixtures mirror exactly what it returns: the `/classifiedList`
+ * payload, one exposé's markup, and that exposé's embedded server state.
+ *
+ * @param {import('../../lib/types/providerConfig.js').ProviderConfig} runConfig the initialized provider config
+ * @param {Function} launchBrowser
+ * @param {Function} closeBrowser
+ * @returns {Promise<void>}
+ */
+async function downloadImmoweltFixtures(runConfig, launchBrowser, closeBrowser) {
+  console.log('\nDownloading immowelt...');
+
+  const { fetchExposeHtml, releaseSession } = await import('../../lib/services/immowelt/immoweltBff.js');
+  const browser = await launchBrowser(runConfig.url, {});
+
+  try {
+    const classifieds = await runConfig.getListings(runConfig.url, browser);
+    if (!classifieds?.length) {
+      console.warn('  Immowelt returned no classifieds - skipping fixtures');
+      return;
+    }
+
+    await writeFile(
+      path.join(FIXTURES_DIR, 'immowelt_classifieds.json'),
+      JSON.stringify(classifieds, null, 2),
+      'utf-8',
+    );
+    console.log(`  Saved immowelt_classifieds.json (${classifieds.length} listings)`);
+
+    const exposeUrl = classifieds
+      .map((entry) => runConfig.normalize(entry)?.link)
+      .find((link) => link?.startsWith('http'));
+    if (!exposeUrl) {
+      console.warn('  No exposé url among the classifieds - skipping detail fixture');
+      return;
+    }
+
+    console.log(`  Downloading immowelt detail (${exposeUrl})...`);
+    const detailHtml = await fetchExposeHtml(browser, exposeUrl);
+    if (!detailHtml) {
+      console.warn('  Failed to download immowelt detail');
+      return;
+    }
+
+    await writeFile(path.join(FIXTURES_DIR, 'immowelt_detail.html'), detailHtml, 'utf-8');
+    console.log('  Saved immowelt_detail.html');
+
+    await writeImmoweltServerState(detailHtml, exposeUrl);
+  } finally {
+    await releaseSession(browser);
+    await closeBrowser(browser);
+  }
+}
+
+/**
  * Fallback for providers that do not expose their listings through the markup (e.g. because they
  * ship them inside an embedded json payload). Those have no crawl container the selector based
  * {@link extractFirstDetailUrl} could work with, so the provider's own `getListings` is asked.
@@ -254,6 +353,9 @@ async function main() {
         break;
       case 'deutscheWohnen':
         await downloadDeutscheWohnenFixtures(runConfig.url, cfg.url);
+        break;
+      case 'immowelt':
+        await downloadImmoweltFixtures(runConfig, launchBrowser, closeBrowser);
         break;
       default:
         await downloadHtmlProvider(name, runConfig, launchBrowser, closeBrowser, puppeteerExtractor);
