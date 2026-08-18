@@ -1,4 +1,525 @@
 {
-  "_comment": "Per-city reference data from immocation's Standort Tool (https://standort.immocation.de/suche), a login-gated dashboard with no bulk export - entries here have to be added by hand, one city at a time, from its search table (columns: Kaufpreis EUR/m2, Kaltmiete EUR/m2, Bruttomietrendite %, Prognos Rang Gesamt/Staerke/Dynamik). Empty is a normal state: standortDataFor() returns null for any listing until a city is added, the same 'no data' outcome rent-data.json has for an unlisted city. Not yet populated for Fredy's target cities as of August 2026 - see rent-data.json's 'cities' key list for the set worth adding. Prognos Rang figures are out of 400 German Kreise/kreisfreie Staedte, lower is better (1 = best). Re-check periodically; this data updates monthly on immocation's side (Kaltmiete/Kaufpreis carry a YYYY-MM tag in the tool's own UI).",
-  "cities": {}
+  "_comment": "Per-city reference data from immocation's Standort Tool (https://standort.immocation.de/suche), pulled 2026-08-18 via its search-page API (POST st-backend-1075988353670.europe-west3.run.app/api/search-page, name-contains filter) for every city in rent-data.json's reference table - the tool has no bulk export, so this was a scripted per-city lookup, not a UI export. kaufpreisPerSqm/kaltmietePerSqm are EUR/m2 (existing-flat purchase price / cold rent, most recent monthly figure at pull time); bruttomietrenditePercent is immocation's own gross-yield calc. prognosRang* are Prognos Zukunftsatlas 2025 ranks out of 400 German Kreise/kreisfreie Staedte (Gesamt/Staerke/Dynamik = overall/current-strength/future-trend), lower is better (1 = best). A few name collisions needed manual disambiguation against rent-data.json's own city list: 'Halle' alone matched a small Niedersachsen village first, resolved by re-querying 'Halle (Saale)' for the Sachsen-Anhalt city; 'Essingen' and 'Leonberg' each had a same-named village in a different Bundesland, resolved to the Baden-Württemberg entry matching this file's other BW cities; 'Schoemberg' has the same Landkreis Calw vs. Zollernalbkreis ambiguity rent-data.json already flags in its own comment - resolved to the Landkreis Calw one (zipcode 75328) for the same reason. Not re-verified against a second source; re-check periodically the same way rent-data.json says to.",
+  "cities": {
+    "münster": {
+      "kaufpreisPerSqm": 4881,
+      "kaltmietePerSqm": 13.89,
+      "bruttomietrenditePercent": 3.414,
+      "prognosRangGesamt": 32,
+      "prognosRangStaerke": 80,
+      "prognosRangDynamik": 9
+    },
+    "muenster": {
+      "kaufpreisPerSqm": 4881,
+      "kaltmietePerSqm": 13.89,
+      "bruttomietrenditePercent": 3.414,
+      "prognosRangGesamt": 32,
+      "prognosRangStaerke": 80,
+      "prognosRangDynamik": 9
+    },
+    "aachen": {
+      "kaufpreisPerSqm": 3448,
+      "kaltmietePerSqm": 12.03,
+      "bruttomietrenditePercent": 4.186,
+      "prognosRangGesamt": 118,
+      "prognosRangStaerke": 158,
+      "prognosRangDynamik": 53
+    },
+    "tübingen": {
+      "kaufpreisPerSqm": 5224,
+      "kaltmietePerSqm": 16.42,
+      "bruttomietrenditePercent": 3.771,
+      "prognosRangGesamt": 78,
+      "prognosRangStaerke": 85,
+      "prognosRangDynamik": 111
+    },
+    "tuebingen": {
+      "kaufpreisPerSqm": 5224,
+      "kaltmietePerSqm": 16.42,
+      "bruttomietrenditePercent": 3.771,
+      "prognosRangGesamt": 78,
+      "prognosRangStaerke": 85,
+      "prognosRangDynamik": 111
+    },
+    "marburg": {
+      "kaufpreisPerSqm": 3606,
+      "kaltmietePerSqm": 12.98,
+      "bruttomietrenditePercent": 4.321,
+      "prognosRangGesamt": 192,
+      "prognosRangStaerke": 212,
+      "prognosRangDynamik": 106
+    },
+    "göttingen": {
+      "kaufpreisPerSqm": 3243,
+      "kaltmietePerSqm": 12.42,
+      "bruttomietrenditePercent": 4.594,
+      "prognosRangGesamt": 282,
+      "prognosRangStaerke": 275,
+      "prognosRangDynamik": 279
+    },
+    "goettingen": {
+      "kaufpreisPerSqm": 3243,
+      "kaltmietePerSqm": 12.42,
+      "bruttomietrenditePercent": 4.594,
+      "prognosRangGesamt": 282,
+      "prognosRangStaerke": 275,
+      "prognosRangDynamik": 279
+    },
+    "gießen": {
+      "kaufpreisPerSqm": 3724,
+      "kaltmietePerSqm": 12.78,
+      "bruttomietrenditePercent": 4.118,
+      "prognosRangGesamt": 170,
+      "prognosRangStaerke": 187,
+      "prognosRangDynamik": 101
+    },
+    "giessen": {
+      "kaufpreisPerSqm": 3724,
+      "kaltmietePerSqm": 12.78,
+      "bruttomietrenditePercent": 4.118,
+      "prognosRangGesamt": 170,
+      "prognosRangStaerke": 187,
+      "prognosRangDynamik": 101
+    },
+    "bochum": {
+      "kaufpreisPerSqm": 2531,
+      "kaltmietePerSqm": 9.34,
+      "bruttomietrenditePercent": 4.427,
+      "prognosRangGesamt": 257,
+      "prognosRangStaerke": 320,
+      "prognosRangDynamik": 30
+    },
+    "dortmund": {
+      "kaufpreisPerSqm": 2722,
+      "kaltmietePerSqm": 9.87,
+      "bruttomietrenditePercent": 4.353,
+      "prognosRangGesamt": 288,
+      "prognosRangStaerke": 328,
+      "prognosRangDynamik": 89
+    },
+    "duisburg": {
+      "kaufpreisPerSqm": 2018,
+      "kaltmietePerSqm": 8.16,
+      "bruttomietrenditePercent": 4.853,
+      "prognosRangGesamt": 339,
+      "prognosRangStaerke": 344,
+      "prognosRangDynamik": 205
+    },
+    "siegen": {
+      "kaufpreisPerSqm": 2539,
+      "kaltmietePerSqm": 9.31,
+      "bruttomietrenditePercent": 4.401,
+      "prognosRangGesamt": 202,
+      "prognosRangStaerke": 178,
+      "prognosRangDynamik": 312
+    },
+    "kaiserslautern": {
+      "kaufpreisPerSqm": 2557,
+      "kaltmietePerSqm": 10.83,
+      "bruttomietrenditePercent": 5.082,
+      "prognosRangGesamt": 318,
+      "prognosRangStaerke": 324,
+      "prognosRangDynamik": 221
+    },
+    "magdeburg": {
+      "kaufpreisPerSqm": 2108,
+      "kaltmietePerSqm": 7.58,
+      "bruttomietrenditePercent": 4.316,
+      "prognosRangGesamt": 324,
+      "prognosRangStaerke": 358,
+      "prognosRangDynamik": 56
+    },
+    "halle": {
+      "kaufpreisPerSqm": 2482,
+      "kaltmietePerSqm": 7.97,
+      "bruttomietrenditePercent": 3.852,
+      "prognosRangGesamt": 320,
+      "prognosRangStaerke": 347,
+      "prognosRangDynamik": 110
+    },
+    "chemnitz": {
+      "kaufpreisPerSqm": 1359,
+      "kaltmietePerSqm": 6.12,
+      "bruttomietrenditePercent": 5.405,
+      "prognosRangGesamt": 319,
+      "prognosRangStaerke": 327,
+      "prognosRangDynamik": 210
+    },
+    "paderborn": {
+      "kaufpreisPerSqm": 3425,
+      "kaltmietePerSqm": 10.58,
+      "bruttomietrenditePercent": 3.706,
+      "prognosRangGesamt": 49,
+      "prognosRangStaerke": 67,
+      "prognosRangDynamik": 48
+    },
+    "ulm": {
+      "kaufpreisPerSqm": 4378,
+      "kaltmietePerSqm": 13.76,
+      "bruttomietrenditePercent": 3.772,
+      "prognosRangGesamt": 11,
+      "prognosRangStaerke": 13,
+      "prognosRangDynamik": 22
+    },
+    "heidelberg": {
+      "kaufpreisPerSqm": 5428,
+      "kaltmietePerSqm": 16.28,
+      "bruttomietrenditePercent": 3.598,
+      "prognosRangGesamt": 15,
+      "prognosRangStaerke": 21,
+      "prognosRangDynamik": 11
+    },
+    "bad hersfeld": {
+      "kaufpreisPerSqm": 2507,
+      "kaltmietePerSqm": 9.06,
+      "bruttomietrenditePercent": 4.338,
+      "prognosRangGesamt": 248,
+      "prognosRangStaerke": 225,
+      "prognosRangDynamik": 264
+    },
+    "erfurt": {
+      "kaufpreisPerSqm": 2906,
+      "kaltmietePerSqm": 9.6,
+      "bruttomietrenditePercent": 3.963,
+      "prognosRangGesamt": 209,
+      "prognosRangStaerke": 256,
+      "prognosRangDynamik": 47
+    },
+    "pforzheim": {
+      "kaufpreisPerSqm": 3018,
+      "kaltmietePerSqm": 11.31,
+      "bruttomietrenditePercent": 4.496,
+      "prognosRangGesamt": 168,
+      "prognosRangStaerke": 166,
+      "prognosRangDynamik": 176
+    },
+    "bremerhaven": {
+      "kaufpreisPerSqm": 1825,
+      "kaltmietePerSqm": 7.9,
+      "bruttomietrenditePercent": 5.196,
+      "prognosRangGesamt": 387,
+      "prognosRangStaerke": 391,
+      "prognosRangDynamik": 295
+    },
+    "walldorf": {
+      "kaufpreisPerSqm": 4013,
+      "kaltmietePerSqm": 13.83,
+      "bruttomietrenditePercent": 4.137,
+      "prognosRangGesamt": 22,
+      "prognosRangStaerke": 18,
+      "prognosRangDynamik": 52
+    },
+    "wiesloch": {
+      "kaufpreisPerSqm": 3500,
+      "kaltmietePerSqm": 12.1,
+      "bruttomietrenditePercent": 4.149,
+      "prognosRangGesamt": 22,
+      "prognosRangStaerke": 18,
+      "prognosRangDynamik": 52
+    },
+    "schwäbisch hall": {
+      "kaufpreisPerSqm": 3277,
+      "kaltmietePerSqm": 12.02,
+      "bruttomietrenditePercent": 4.401,
+      "prognosRangGesamt": 102,
+      "prognosRangStaerke": 105,
+      "prognosRangDynamik": 135
+    },
+    "schwaebisch hall": {
+      "kaufpreisPerSqm": 3277,
+      "kaltmietePerSqm": 12.02,
+      "bruttomietrenditePercent": 4.401,
+      "prognosRangGesamt": 102,
+      "prognosRangStaerke": 105,
+      "prognosRangDynamik": 135
+    },
+    "offenburg": {
+      "kaufpreisPerSqm": 3333,
+      "kaltmietePerSqm": 11.78,
+      "bruttomietrenditePercent": 4.24,
+      "prognosRangGesamt": 112,
+      "prognosRangStaerke": 121,
+      "prognosRangDynamik": 139
+    },
+    "fulda": {
+      "kaufpreisPerSqm": 3283,
+      "kaltmietePerSqm": 10.68,
+      "bruttomietrenditePercent": 3.904,
+      "prognosRangGesamt": 147,
+      "prognosRangStaerke": 142,
+      "prognosRangDynamik": 181
+    },
+    "aalen": {
+      "kaufpreisPerSqm": 3389,
+      "kaltmietePerSqm": 12.62,
+      "bruttomietrenditePercent": 4.468,
+      "prognosRangGesamt": 27,
+      "prognosRangStaerke": 26,
+      "prognosRangDynamik": 69
+    },
+    "essingen": {
+      "kaufpreisPerSqm": 3035,
+      "kaltmietePerSqm": 11.8,
+      "bruttomietrenditePercent": 4.665,
+      "prognosRangGesamt": 27,
+      "prognosRangStaerke": 26,
+      "prognosRangDynamik": 69
+    },
+    "villingen-schwenningen": {
+      "kaufpreisPerSqm": 2962,
+      "kaltmietePerSqm": 11.29,
+      "bruttomietrenditePercent": 4.573,
+      "prognosRangGesamt": 89,
+      "prognosRangStaerke": 84,
+      "prognosRangDynamik": 147
+    },
+    "dresden": {
+      "kaufpreisPerSqm": 3351,
+      "kaltmietePerSqm": 10.34,
+      "bruttomietrenditePercent": 3.701,
+      "prognosRangGesamt": 38,
+      "prognosRangStaerke": 59,
+      "prognosRangDynamik": 33
+    },
+    "leipzig": {
+      "kaufpreisPerSqm": 3273,
+      "kaltmietePerSqm": 10.16,
+      "bruttomietrenditePercent": 3.725,
+      "prognosRangGesamt": 152,
+      "prognosRangStaerke": 221,
+      "prognosRangDynamik": 13
+    },
+    "vaihingen an der enz": {
+      "kaufpreisPerSqm": 3708,
+      "kaltmietePerSqm": 12.9,
+      "bruttomietrenditePercent": 4.174,
+      "prognosRangGesamt": 16,
+      "prognosRangStaerke": 9,
+      "prognosRangDynamik": 356
+    },
+    "ludwigsburg": {
+      "kaufpreisPerSqm": 4352,
+      "kaltmietePerSqm": 15.39,
+      "bruttomietrenditePercent": 4.243,
+      "prognosRangGesamt": 16,
+      "prognosRangStaerke": 9,
+      "prognosRangDynamik": 356
+    },
+    "leonberg": {
+      "kaufpreisPerSqm": 3991,
+      "kaltmietePerSqm": 15.24,
+      "bruttomietrenditePercent": 4.581,
+      "prognosRangGesamt": 5,
+      "prognosRangStaerke": 4,
+      "prognosRangDynamik": 230
+    },
+    "ditzingen": {
+      "kaufpreisPerSqm": 3810,
+      "kaltmietePerSqm": 14.9,
+      "bruttomietrenditePercent": 4.692,
+      "prognosRangGesamt": 16,
+      "prognosRangStaerke": 9,
+      "prognosRangDynamik": 356
+    },
+    "sachsenheim": {
+      "kaufpreisPerSqm": 3577,
+      "kaltmietePerSqm": 13.39,
+      "bruttomietrenditePercent": 4.491,
+      "prognosRangGesamt": 16,
+      "prognosRangStaerke": 9,
+      "prognosRangDynamik": 356
+    },
+    "bietigheim-bissingen": {
+      "kaufpreisPerSqm": 4124,
+      "kaltmietePerSqm": 14.25,
+      "bruttomietrenditePercent": 4.146,
+      "prognosRangGesamt": 16,
+      "prognosRangStaerke": 9,
+      "prognosRangDynamik": 356
+    },
+    "freiberg am neckar": {
+      "kaufpreisPerSqm": 3977,
+      "kaltmietePerSqm": 14.57,
+      "bruttomietrenditePercent": 4.397,
+      "prognosRangGesamt": 16,
+      "prognosRangStaerke": 9,
+      "prognosRangDynamik": 356
+    },
+    "eppingen": {
+      "kaufpreisPerSqm": 3155,
+      "kaltmietePerSqm": 11.02,
+      "bruttomietrenditePercent": 4.191,
+      "prognosRangGesamt": 12,
+      "prognosRangStaerke": 10,
+      "prognosRangDynamik": 162
+    },
+    "lauffen am neckar": {
+      "kaufpreisPerSqm": 3449,
+      "kaltmietePerSqm": 12.23,
+      "bruttomietrenditePercent": 4.254,
+      "prognosRangGesamt": 12,
+      "prognosRangStaerke": 10,
+      "prognosRangDynamik": 162
+    },
+    "asperg": {
+      "kaufpreisPerSqm": 4365,
+      "kaltmietePerSqm": 15.48,
+      "bruttomietrenditePercent": 4.256,
+      "prognosRangGesamt": 16,
+      "prognosRangStaerke": 9,
+      "prognosRangDynamik": 356
+    },
+    "bad wildbad": {
+      "kaufpreisPerSqm": 2262,
+      "kaltmietePerSqm": 9.62,
+      "bruttomietrenditePercent": 5.104,
+      "prognosRangGesamt": 164,
+      "prognosRangStaerke": 144,
+      "prognosRangDynamik": 269
+    },
+    "bad herrenalb": {
+      "kaufpreisPerSqm": 2351,
+      "kaltmietePerSqm": 10.01,
+      "bruttomietrenditePercent": 5.11,
+      "prognosRangGesamt": 164,
+      "prognosRangStaerke": 144,
+      "prognosRangDynamik": 269
+    },
+    "bad liebenzell": {
+      "kaufpreisPerSqm": 2741,
+      "kaltmietePerSqm": 11.11,
+      "bruttomietrenditePercent": 4.865,
+      "prognosRangGesamt": 164,
+      "prognosRangStaerke": 144,
+      "prognosRangDynamik": 269
+    },
+    "gernsbach": {
+      "kaufpreisPerSqm": 2994,
+      "kaltmietePerSqm": 10.88,
+      "bruttomietrenditePercent": 4.362,
+      "prognosRangGesamt": 79,
+      "prognosRangStaerke": 38,
+      "prognosRangDynamik": 372
+    },
+    "baiersbronn": {
+      "kaufpreisPerSqm": 2057,
+      "kaltmietePerSqm": 10.07,
+      "bruttomietrenditePercent": 5.875,
+      "prognosRangGesamt": 154,
+      "prognosRangStaerke": 134,
+      "prognosRangDynamik": 270
+    },
+    "calw": {
+      "kaufpreisPerSqm": 3271,
+      "kaltmietePerSqm": 11.26,
+      "bruttomietrenditePercent": 4.132,
+      "prognosRangGesamt": 164,
+      "prognosRangStaerke": 144,
+      "prognosRangDynamik": 269
+    },
+    "baden-baden": {
+      "kaufpreisPerSqm": 4131,
+      "kaltmietePerSqm": 12.58,
+      "bruttomietrenditePercent": 3.653,
+      "prognosRangGesamt": 107,
+      "prognosRangStaerke": 70,
+      "prognosRangDynamik": 309
+    },
+    "forbach": {
+      "kaufpreisPerSqm": 1713,
+      "kaltmietePerSqm": 8.77,
+      "bruttomietrenditePercent": 6.144,
+      "prognosRangGesamt": 79,
+      "prognosRangStaerke": 38,
+      "prognosRangDynamik": 372
+    },
+    "haiterbach": {
+      "kaufpreisPerSqm": 2935,
+      "kaltmietePerSqm": 10.43,
+      "bruttomietrenditePercent": 4.264,
+      "prognosRangGesamt": 164,
+      "prognosRangStaerke": 144,
+      "prognosRangDynamik": 269
+    },
+    "nagold": {
+      "kaufpreisPerSqm": 3413,
+      "kaltmietePerSqm": 12.17,
+      "bruttomietrenditePercent": 4.277,
+      "prognosRangGesamt": 164,
+      "prognosRangStaerke": 144,
+      "prognosRangDynamik": 269
+    },
+    "ebhausen": {
+      "kaufpreisPerSqm": 2281,
+      "kaltmietePerSqm": 10.61,
+      "bruttomietrenditePercent": 5.58,
+      "prognosRangGesamt": 164,
+      "prognosRangStaerke": 144,
+      "prognosRangDynamik": 269
+    },
+    "straubenhardt": {
+      "kaufpreisPerSqm": 3286,
+      "kaltmietePerSqm": 10.21,
+      "bruttomietrenditePercent": 3.729,
+      "prognosRangGesamt": 65,
+      "prognosRangStaerke": 37,
+      "prognosRangDynamik": 328
+    },
+    "keltern": {
+      "kaufpreisPerSqm": 2800,
+      "kaltmietePerSqm": 10.19,
+      "bruttomietrenditePercent": 4.369,
+      "prognosRangGesamt": 65,
+      "prognosRangStaerke": 37,
+      "prognosRangDynamik": 328
+    },
+    "mönchengladbach": {
+      "kaufpreisPerSqm": 2385,
+      "kaltmietePerSqm": 9.65,
+      "bruttomietrenditePercent": 4.856,
+      "prognosRangGesamt": 281,
+      "prognosRangStaerke": 308,
+      "prognosRangDynamik": 120
+    },
+    "moenchengladbach": {
+      "kaufpreisPerSqm": 2385,
+      "kaltmietePerSqm": 9.65,
+      "bruttomietrenditePercent": 4.856,
+      "prognosRangGesamt": 281,
+      "prognosRangStaerke": 308,
+      "prognosRangDynamik": 120
+    },
+    "schömberg": {
+      "kaufpreisPerSqm": 2589,
+      "kaltmietePerSqm": 10.12,
+      "bruttomietrenditePercent": 4.691,
+      "prognosRangGesamt": 164,
+      "prognosRangStaerke": 144,
+      "prognosRangDynamik": 269
+    },
+    "schoemberg": {
+      "kaufpreisPerSqm": 2589,
+      "kaltmietePerSqm": 10.12,
+      "bruttomietrenditePercent": 4.691,
+      "prognosRangGesamt": 164,
+      "prognosRangStaerke": 144,
+      "prognosRangDynamik": 269
+    },
+    "villingen": {
+      "kaufpreisPerSqm": 2962,
+      "kaltmietePerSqm": 11.29,
+      "bruttomietrenditePercent": 4.573,
+      "prognosRangGesamt": 89,
+      "prognosRangStaerke": 84,
+      "prognosRangDynamik": 147
+    },
+    "schwenningen": {
+      "kaufpreisPerSqm": 2962,
+      "kaltmietePerSqm": 11.29,
+      "bruttomietrenditePercent": 4.573,
+      "prognosRangGesamt": 89,
+      "prognosRangStaerke": 84,
+      "prognosRangDynamik": 147
+    }
+  }
 }
