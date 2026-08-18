@@ -14,6 +14,7 @@ import {
   IconEyeOpened,
 } from '@douyinfe/semi-icons';
 import no_image from '../../../assets/no_image.png';
+import { formatEuroPrice } from '../../../services/price/priceService.js';
 import * as timeService from '../../../services/time/timeService.js';
 import StatusControl from '../../listings/StatusControl.jsx';
 import ExternalListingLink from '../../listings/ExternalListingLink.jsx';
@@ -82,7 +83,7 @@ const ListingsGrid = ({ listings, onWatch, onNavigate, onDelete, onRestore, isHi
             {item.price && (
               <div className="listingsGrid__card__price">
                 <IconCart size="small" />
-                {item.price}
+                {formatEuroPrice(item.price, locale)}
                 <AffordabilityChip verdict={item.affordabilityVerdict} dealType={item.dealType} />
                 <PriceChangeBadge
                   price={item.price}
@@ -103,7 +104,7 @@ const ListingsGrid = ({ listings, onWatch, onNavigate, onDelete, onRestore, isHi
             </div>
             {/* Compact on purpose: on a card the commute is a number you scan past twenty others,
                 not something you read. The detail page shows the full picture. */}
-            <CommuteBadge travelTimes={item.travelTimes} />
+            <CommuteBadge travelTimes={item.travelTimes} jobId={item.job_id} />
             <div className="listingsGrid__card__provider">{timeService.format(item.created_at, false, locale)}</div>
           </div>
 
@@ -123,7 +124,7 @@ const ListingsGrid = ({ listings, onWatch, onNavigate, onDelete, onRestore, isHi
               <Button
                 size="small"
                 icon={<IconEyeOpened />}
-                style={{ color: '#34d399' }}
+                style={{ color: '#4bab86' }}
                 theme="borderless"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -140,7 +141,7 @@ const ListingsGrid = ({ listings, onWatch, onNavigate, onDelete, onRestore, isHi
                       <IconDelete />
                     </span>
                   }
-                  style={{ color: '#34d399' }}
+                  style={{ color: '#4bab86' }}
                   theme="borderless"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -154,7 +155,7 @@ const ListingsGrid = ({ listings, onWatch, onNavigate, onDelete, onRestore, isHi
                 <Button
                   size="small"
                   icon={<IconDelete />}
-                  style={{ color: '#fb7185' }}
+                  style={{ color: '#d4707c' }}
                   theme="borderless"
                   onClick={(e) => {
                     e.stopPropagation();

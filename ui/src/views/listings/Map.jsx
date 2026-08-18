@@ -22,12 +22,15 @@ import _RangeSlider from 'react-range-slider-input';
 import 'react-range-slider-input/dist/style.css';
 import './Map.less';
 import { xhrDelete, errorMessage } from '../../services/xhr.js';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import ListingDeletionModal from '../../components/ListingDeletionModal.jsx';
 import { createListingPopupContent } from './listingPopupContent.jsx';
-import Map from '../../components/map/Map.jsx';
+// Not imported as `Map`. This module is itself called Map.jsx, and a component of that name shadows
+// the global `Map` constructor for the whole file: `new Map()` then invokes a React function
+// component with no props, which fails somewhere inside it rather than where it was written.
+import MapCanvas, { HOME_MARKER_COLOR } from '../../components/map/Map.jsx';
 import Headline from '../../components/headline/Headline.jsx';
-import { useTranslation } from '../../services/i18n/i18n.jsx';
+import { useTranslation, useLocale } from '../../services/i18n/i18n.jsx';
 import { keepPopupInView, mountPopupNode } from '../../components/map/popupContent.jsx';
 import NearbyStops from '../../components/transit/NearbyStops.jsx';
 import { COMMUTE_OPTIONS, parseCommuteFilter } from '../../components/transit/travelTimeFormat.js';
@@ -57,12 +60,16 @@ const MAP_URL_STATE = {
  */
 const LISTING_POPUP_MAX_WIDTH = '380px';
 
+/** The plain pin, for every job without a limit and for anything not measured yet. */
+const DEFAULT_MARKER_COLOR = '#3FB1CE';
+
 const RangeSlider = _RangeSlider?.default ?? _RangeSlider;
 
 const { Text } = Typography;
 
 export default function MapView() {
   const t = useTranslation();
+  const locale = useLocale();
   const map = useRef(null);
   const markers = useRef([]);
   const homeMarkers = useRef([]);
@@ -75,6 +82,7 @@ export default function MapView() {
   const listings = useSelector((state) => state.listingsData.mapListings);
   const userSettings = useSelector((state) => state.userSettings.settings);
   const homeAddresses = useMemo(() => getAddresses(userSettings), [userSettings]);
+
   const language = userSettings?.language ?? 'en';
   // Absent means off, which is why this needed no migration.
   const transitHoverPopups = userSettings?.transit_hover_popups === true;
@@ -82,6 +90,7 @@ export default function MapView() {
   const defaultDeleteType = listingDeletionPref?.hardDelete ? 'hard' : 'soft';
 
   const jobs = useSelector((state) => state.jobsData.jobs);
+
   // One grouped state rather than four independent setters: two of these can change in the same
   // tick, and separate setSearchParams calls overwrite each other.
   const { values: urlState, setValue: setUrlValue, setValues } = useUrlState(sp, MAP_URL_STATE);
@@ -160,8 +169,8 @@ export default function MapView() {
    * Unlike the distance ring, which only recolours pins, this one hides them: a commute ceiling is
    * asked as "show me only what I could actually live with", and a pin that fails it is noise.
    *
-   * A listing that has not been routed yet has nothing to answer with and drops out. That is why the
-   * control sits next to a legend saying so, rather than being on by default.
+   * A listing that has not been routed yet has nothing to answer with and drops out, which is why
+   * this is off until it is asked for rather than on by default.
    *
    * @param {Object} listing
    * @returns {boolean}
@@ -303,7 +312,7 @@ export default function MapView() {
     popupRoots.current = [];
 
     homeAddresses.forEach((home) => {
-      const marker = new maplibregl.Marker({ color: 'red' })
+      const marker = new maplibregl.Marker({ color: HOME_MARKER_COLOR })
         .setLngLat([home.coords.lng, home.coords.lat])
         .setPopup(
           new maplibregl.Popup({ offset: 25 }).setHTML(
@@ -381,7 +390,12 @@ export default function MapView() {
         stopFit = keepPopupInView(map.current, popup);
       };
 
-      const { element, transitMount } = createListingPopupContent({ listings: grouped, t, onPageChange: refit });
+      const { element, transitMount } = createListingPopupContent({
+        listings: grouped,
+        t,
+        locale,
+        onPageChange: refit,
+      });
 
       popup = new maplibregl.Popup({ offset: 25, maxWidth: LISTING_POPUP_MAX_WIDTH }).setDOMContent(element);
 
@@ -401,7 +415,9 @@ export default function MapView() {
         popupRoots.current.push(unmount);
       });
 
-      let color = '#3FB1CE';
+      // The commute verdict is drawn as the shape underneath rather than onto the pin, so the only
+      // thing left that recolours a pin is the distance ring, which is asked for explicitly.
+      let color = DEFAULT_MARKER_COLOR;
       if (distanceFilter > 0 && homeAddresses.length > 0) {
         const inRange = homeAddresses.some(
           (home) => distanceMeters(home.coords.lat, home.coords.lng, lat, lng) <= distanceFilter * 1000,
@@ -451,7 +467,7 @@ export default function MapView() {
         )}
 
         <div className="map-view-container__map-wrapper">
-          <Map
+          <MapCanvas
             style={style}
             show3dBuildings={show3dBuildings}
             showTransit={showTransit}
@@ -523,6 +539,9 @@ export default function MapView() {
                     <Select.Option value={25}>25 km</Select.Option>
                   </Select>
                 </div>
+
+                {/* Only for the people it can answer for: without a ceiling in Settings there is no
+                    budget to draw an area from. */}
 
                 {/* Only offered once there is an address to measure a commute from. Unlike the
                     distance ring above, which recolours pins, this one hides them: a commute

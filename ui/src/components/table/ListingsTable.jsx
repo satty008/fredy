@@ -61,7 +61,7 @@ const ListingsTable = ({
           <div className="listingsTable__row__price">
             {item.price ? (
               <>
-                {formatEuroPrice(item.price)}
+                {formatEuroPrice(item.price, locale)}
                 <AffordabilityChip verdict={item.affordabilityVerdict} dealType={item.dealType} />
                 <PriceChangeBadge
                   price={item.price}
@@ -85,7 +85,7 @@ const ListingsTable = ({
             )}
             {/* Under the address rather than in a column of its own: it is the same question, and a
                 column would be empty for every listing that has not been routed yet. */}
-            <CommuteBadge travelTimes={item.travelTimes} />
+            <CommuteBadge travelTimes={item.travelTimes} jobId={item.job_id} />
           </div>
 
           <div className="listingsTable__row__meta">
@@ -127,7 +127,7 @@ const ListingsTable = ({
               <Button
                 size="small"
                 icon={<IconEyeOpened />}
-                style={{ color: '#34d399' }}
+                style={{ color: '#4bab86' }}
                 theme="borderless"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -144,7 +144,7 @@ const ListingsTable = ({
                       <IconDelete />
                     </span>
                   }
-                  style={{ color: '#34d399' }}
+                  style={{ color: '#4bab86' }}
                   theme="borderless"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -158,7 +158,7 @@ const ListingsTable = ({
                 <Button
                   size="small"
                   icon={<IconDelete />}
-                  style={{ color: '#fb7185' }}
+                  style={{ color: '#d4707c' }}
                   theme="borderless"
                   onClick={(e) => {
                     e.stopPropagation();

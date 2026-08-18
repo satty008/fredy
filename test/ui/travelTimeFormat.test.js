@@ -5,7 +5,11 @@
 
 import { describe, it, expect } from 'vitest';
 import {
+  addressesWithBudget,
   availableModes,
+  commuteBand,
+  commuteBandMode,
+  commuteBudgetOf,
   hasAnyTime,
   parseCommuteFilter,
   primaryMode,
@@ -78,6 +82,89 @@ describe('travelTimeFormat', () => {
       expect(parseCommuteFilter('teleport:30')).toBeNull();
       expect(parseCommuteFilter('transit:0')).toBeNull();
       expect(parseCommuteFilter(null)).toBeNull();
+    });
+  });
+
+  describe('addressesWithBudget', () => {
+    const saved = [
+      { label: 'Work', mode: 'transit' },
+      { label: 'School', mode: 'transit' },
+    ];
+
+    it("joins a job's limits onto the addresses that carry the mode", () => {
+      const budgeted = addressesWithBudget(saved, { limits: { Work: 35 } });
+      expect(budgeted).toEqual([{ label: 'Work', mode: 'transit', maxMinutes: 35 }]);
+    });
+
+    it('drops a limit whose address is gone, and one that is not a limit', () => {
+      expect(addressesWithBudget(saved, { limits: { Gym: 20 } })).toEqual([]);
+      expect(addressesWithBudget(saved, { limits: { Work: 0 } })).toEqual([]);
+    });
+
+    /** Every job before this feature, which is what keeps every pin the colour it has always been. */
+    it('has nothing for a job without a filter', () => {
+      expect(addressesWithBudget(saved, null)).toEqual([]);
+      expect(addressesWithBudget(saved, {})).toEqual([]);
+      expect(addressesWithBudget(null, { limits: { Work: 35 } })).toEqual([]);
+    });
+  });
+
+  describe('commuteBand', () => {
+    const work = { label: 'Work', mode: 'transit', maxMinutes: 40 };
+
+    /**
+     * @param {number} minutes
+     * @param {string} [label]
+     * @returns {Object}
+     */
+    const entry = (minutes, label = 'Work') => ({ label, mode: 'transit', transit: { minutes, transfers: 1 } });
+
+    it('grades a commute against the ceiling on its address', () => {
+      expect(commuteBand(entry(30), work)).toBe('good');
+      expect(commuteBand(entry(40), work)).toBe('good');
+      expect(commuteBand(entry(46), work)).toBe('acceptable');
+      expect(commuteBand(entry(50), work)).toBe('acceptable');
+      expect(commuteBand(entry(51), work)).toBe('poor');
+    });
+
+    it('has no colour to give without a ceiling or without an answer', () => {
+      expect(commuteBand(entry(30), { label: 'Work', mode: 'transit' })).toBeNull();
+      expect(commuteBand({ label: 'Work', mode: 'transit' }, work)).toBeNull();
+      expect(commuteBand(entry(30), undefined)).toBeNull();
+    });
+
+    it('grades in the mode the address is measured in', () => {
+      const byCar = { label: 'Work', mode: 'car', maxMinutes: 20 };
+      const both = { label: 'Work', mode: 'car', car: { minutes: 15 }, transit: { minutes: 80 } };
+      expect(commuteBand(both, byCar)).toBe('good');
+      expect(commuteBand(both, { ...byCar, mode: 'transit' })).toBe('poor');
+    });
+
+    /**
+     * What the badge checks before it paints anything. The card leads with the first mode that has
+     * an answer, which on a row written before the mode was recorded need not be the mode the
+     * ceiling is about - and a colour applied to the wrong number is worse than no colour.
+     */
+    it('names the mode it is grading, so a caller can tell it apart from the one it shows', () => {
+      expect(commuteBandMode({ mode: 'car' }, { mode: 'walk', maxMinutes: 20 })).toBe('walk');
+      expect(commuteBandMode({ mode: 'car' }, { maxMinutes: 20 })).toBe('car');
+      expect(commuteBandMode({ mode: null }, { maxMinutes: 20 })).toBe('transit');
+      expect(commuteBandMode({ mode: 'hovercraft' }, { mode: 'rocket', maxMinutes: 20 })).toBe('transit');
+    });
+
+    it('has nothing to say when only some other mode was measured', () => {
+      const walkOnly = { label: 'Work', mode: 'walk', walk: { minutes: 8 } };
+      expect(commuteBand(walkOnly, { label: 'Work', mode: 'transit', maxMinutes: 20 })).toBeNull();
+    });
+  });
+
+  describe('commuteBudgetOf', () => {
+    it('reads a usable limit and nothing else', () => {
+      expect(commuteBudgetOf({ maxMinutes: 35 })).toBe(35);
+      expect(commuteBudgetOf({ maxMinutes: '35' })).toBe(35);
+      expect(commuteBudgetOf({ maxMinutes: 0 })).toBeNull();
+      expect(commuteBudgetOf({})).toBeNull();
+      expect(commuteBudgetOf(null)).toBeNull();
     });
   });
 });
