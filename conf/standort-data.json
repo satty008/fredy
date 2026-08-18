@@ -1,0 +1,4 @@
+{
+  "_comment": "Per-city reference data from immocation's Standort Tool (https://standort.immocation.de/suche), a login-gated dashboard with no bulk export - entries here have to be added by hand, one city at a time, from its search table (columns: Kaufpreis EUR/m2, Kaltmiete EUR/m2, Bruttomietrendite %, Prognos Rang Gesamt/Staerke/Dynamik). Empty is a normal state: standortDataFor() returns null for any listing until a city is added, the same 'no data' outcome rent-data.json has for an unlisted city. Not yet populated for Fredy's target cities as of August 2026 - see rent-data.json's 'cities' key list for the set worth adding. Prognos Rang figures are out of 400 German Kreise/kreisfreie Staedte, lower is better (1 = best). Re-check periodically; this data updates monthly on immocation's side (Kaltmiete/Kaufpreis carry a YYYY-MM tag in the tool's own UI).",
+  "cities": {}
+}
