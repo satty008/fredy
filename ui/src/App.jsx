@@ -11,6 +11,7 @@ import SettingsLayout from './views/settings/SettingsLayout';
 import PreferencesPage from './views/settings/pages/PreferencesPage';
 import TravelTimePage from './views/settings/pages/TravelTimePage';
 import ListingDetailsPage from './views/settings/pages/ListingDetailsPage';
+import NotificationsPage from './views/settings/pages/NotificationsPage';
 import AdminLayout from './views/admin/AdminLayout';
 import SystemPage from './views/admin/pages/SystemPage';
 import ExecutionPage from './views/admin/pages/ExecutionPage';
@@ -20,7 +21,7 @@ import JobMutation from './views/jobs/mutation/JobMutation';
 import UserMutator from './views/user/mutation/UserMutator';
 import { useActions, useSelector } from './services/state/store';
 import { useBrowserNotifications } from './hooks/useBrowserNotifications';
-import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useParams } from 'react-router';
 import Login from './views/login/Login';
 import Users from './views/user/Users';
 import Jobs from './views/jobs/Jobs';
@@ -34,7 +35,6 @@ import MapView from './views/listings/Map.jsx';
 import Navigation from './components/navigation/Navigation.jsx';
 import { Layout } from '@douyinfe/semi-ui-19';
 import FredyFooter from './components/footer/FredyFooter.jsx';
-import WatchlistManagement from './views/listings/management/WatchlistManagement.jsx';
 import Dashboard from './views/dashboard/Dashboard.jsx';
 import FinanceCalculator from './views/finance/FinanceCalculator.jsx';
 import ListingDetail from './views/listings/ListingDetail.jsx';
@@ -42,6 +42,7 @@ import NewsModal from './components/news/NewsModal.jsx';
 import { I18nProvider, availableLanguages } from './services/i18n/i18n.jsx';
 import DebugLoggingBanner from './components/debug/DebugLoggingBanner.jsx';
 import DemoBanner from './components/demo/DemoBanner.jsx';
+import { LEGACY_REDIRECTS } from './services/routes/legacyRedirects.js';
 
 const semiLocaleModules = import.meta.glob('/node_modules/@douyinfe/semi-ui-19/lib/es/locale/source/*.js', {
   eager: true,
@@ -199,21 +200,19 @@ export default function FredyApp() {
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/jobs" element={<Jobs />} />
                   <Route path="/listings" element={<Listings />} />
-                  <Route path="/listings/watchlist" element={<Listings mode="watchlist" />} />
                   <Route path="/listings/listing/:listingId" element={<ListingDetail />} />
                   <Route path="/map" element={<MapView />} />
                   <Route path="/finance" element={<FinanceCalculator />} />
-                  <Route path="/watchlistManagement" element={<WatchlistManagement />} />
 
-                  {/* Settings that belong to whoever is signed in. No guard: they are theirs. */}
+                  {/* Settings that belong to whoever is signed in. No guard: they are theirs.
+                      One entry in the sidebar, and the tabs below the heading are the only place
+                      these four pages are named. */}
                   <Route path="/settings" element={<SettingsLayout />}>
                     <Route index element={<Navigate to="/settings/preferences" replace />} />
                     <Route path="preferences" element={<PreferencesPage />} />
                     <Route path="travel-time" element={<TravelTimePage />} />
-                    {/* Was "addresses" until the page grew from a list of places into how travel
-                        time to them is measured. */}
-                    <Route path="addresses" element={<Navigate to="/settings/travel-time" replace />} />
                     <Route path="listings" element={<ListingDetailsPage />} />
+                    <Route path="notifications" element={<NotificationsPage />} />
                   </Route>
 
                   {/* Settings that belong to the instance. Guarded once, at the parent, so a new
@@ -236,12 +235,13 @@ export default function FredyApp() {
                     <Route path="debug" element={<DebugPage />} />
                   </Route>
 
-                  {/* The addresses these used to live at. Kept so existing bookmarks and the links
-                      in older notification emails still land somewhere sensible. */}
-                  <Route path="/generalSettings" element={<Navigate to="/settings/preferences" replace />} />
-                  <Route path="/userSettings" element={<Navigate to="/settings/preferences" replace />} />
-                  <Route path="/users" element={<Navigate to="/admin/users" replace />} />
-                  <Route path="/users/new" element={<Navigate to="/admin/users/new" replace />} />
+                  {/* The addresses these things used to live at, kept so existing bookmarks and the
+                      links in older notification emails still land somewhere sensible. The table
+                      lives in legacyRedirects.js so a test can check every entry still resolves. */}
+                  {Object.entries(LEGACY_REDIRECTS).map(([from, to]) => (
+                    <Route key={from} path={from} element={<Navigate to={to} replace />} />
+                  ))}
+                  {/* Carries a parameter, so it needs a component rather than a table entry. */}
                   <Route path="/users/edit/:userId" element={<LegacyUserEditRedirect />} />
 
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />

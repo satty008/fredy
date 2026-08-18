@@ -32,6 +32,103 @@ export const COMMUTE_OPTIONS = [
 ];
 
 /**
+ * How far over the limit still counts as "nearly".
+ *
+ * A commute limit is not a cliff. Somebody who says 30 minutes does not stop being interested at 31,
+ * they stop being interested somewhere past it, and a map that painted 31 the same red as 70 would
+ * be throwing away the only distinction worth drawing. A quarter over is the band where a flat is
+ * worth a second look and no more than that.
+ * @type {number}
+ */
+export const ACCEPTABLE_FACTOR = 1.25;
+
+/**
+ * The limit on one address's commute, if the search has one.
+ *
+ * Deliberately a copy of `normalizeCommuteBudget` in `lib/utils/commuteBudget.js` rather than an
+ * import: the frontend may not reach into server code (see the eslint rule), and this is four lines
+ * of arithmetic. The server is the one that enforces it; this only decides what colour to paint.
+ *
+ * @param {Object} address - Carrying a `maxMinutes`, as {@link addressesWithBudget} produces.
+ * @returns {number|null}
+ */
+export function commuteBudgetOf(address) {
+  const minutes = Math.floor(Number(address?.maxMinutes));
+  return Number.isFinite(minutes) && minutes > 0 ? minutes : null;
+}
+
+/**
+ * The addresses a job has a limit for, each carrying that limit.
+ *
+ * Two halves meet here, the same way they do on the server. The job knows how far is too far, keyed
+ * by address label; the user's address list knows how the journey to that label is measured. A limit
+ * naming an address that no longer exists is dropped: without the address there is no mode to judge
+ * it in.
+ *
+ * @param {Array<Object>|null|undefined} addresses - The user's saved addresses.
+ * @param {{limits?: Record<string, number>}|null|undefined} commuteFilter - As stored on the job.
+ * @returns {Array<Object>} Addresses with a `maxMinutes`. Empty for a job without a filter, which is
+ *   what leaves every pin and every badge in the plain, uncoloured state.
+ */
+export function addressesWithBudget(addresses, commuteFilter) {
+  const limits = commuteFilter?.limits;
+  if (limits == null || typeof limits !== 'object') {
+    return [];
+  }
+  return (Array.isArray(addresses) ? addresses : [])
+    .map((address) => ({ ...address, maxMinutes: limits[address?.label] }))
+    .filter((address) => commuteBudgetOf(address) != null);
+}
+
+/**
+ * The mode a limit is judged in.
+ *
+ * The one the address is set to, because that is the question the user asked - a limit of 35 next to
+ * "Public transport" is a statement about the train, and answering it with the driving time would
+ * be answering something else. Rows written before the mode was recorded fall back to whatever the
+ * row itself says it measured. Mirrors `judgingMode` in `lib/utils/commuteBudget.js`, which is what
+ * actually decides whether the notification goes out.
+ *
+ * @param {Object} entry - A stored travel time.
+ * @param {Object} address - The address it was measured from.
+ * @returns {string}
+ */
+export function commuteBandMode(entry, address) {
+  for (const candidate of [address?.mode, entry?.mode]) {
+    if (TRAVEL_MODES.some((mode) => mode.key === candidate)) {
+      return candidate;
+    }
+  }
+  return 'transit';
+}
+
+/**
+ * How one address's limit judges one stored travel time.
+ *
+ * Measured in the mode the address is set to, because that is the question the user asked. Returns
+ * `null` whenever there is nothing to judge on - no limit, or no answer in that mode - which the
+ * callers render as the plain, uncoloured state rather than as a pass or a fail.
+ *
+ * @param {Object} entry - A stored travel time.
+ * @param {Object} address - The address it was measured from, carrying this search's `maxMinutes`.
+ * @returns {'good'|'acceptable'|'poor'|null}
+ */
+export function commuteBand(entry, address) {
+  const budget = commuteBudgetOf(address);
+  if (budget == null) {
+    return null;
+  }
+  const minutes = entry?.[commuteBandMode(entry, address)]?.minutes;
+  if (!Number.isFinite(minutes)) {
+    return null;
+  }
+  if (minutes <= budget) {
+    return 'good';
+  }
+  return minutes <= budget * ACCEPTABLE_FACTOR ? 'acceptable' : 'poor';
+}
+
+/**
  * Splits the combined commute filter value into its two halves.
  *
  * Mode and ceiling travel as one string (`transit:30`) so a bookmarked URL can never carry half a
@@ -96,6 +193,28 @@ export function availableModes(entry) {
     minutes: entry[mode.key].minutes,
     transfers: mode.key === 'transit' ? (entry.transit.transfers ?? 0) : undefined,
   }));
+}
+
+/**
+ * The one mode to show when there is only room for one.
+ *
+ * The mode the address is measured in, which is the question the user actually asked - not the
+ * fastest one. Picking the fastest looked reasonable on a card and was not stable: a listing carries
+ * only its public transport estimate until somebody opens it, and the detail page then adds car,
+ * bike and walk, so the card would silently switch from the train to the car for a listing that had
+ * not changed at all. Rows written before the mode was recorded fall back to the first mode with an
+ * answer, which is public transport wherever there is one.
+ *
+ * @param {Object} entry
+ * @returns {{key: string, icon: string, labelKey: string, minutes: number, transfers?: number}|null}
+ * `null` when the entry has no answer at all.
+ */
+export function primaryMode(entry) {
+  const modes = availableModes(entry);
+  if (modes.length === 0) {
+    return null;
+  }
+  return modes.find((mode) => mode.key === entry?.mode) ?? modes[0];
 }
 
 /**
