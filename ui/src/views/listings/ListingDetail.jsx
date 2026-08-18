@@ -660,6 +660,8 @@ export default function ListingDetail() {
                 notesSaving={notesSaving}
                 notesDirty={(notesDraft ?? '') !== (listing.notes ?? '')}
                 aiVerdict={listing.ai_verdict}
+                immocockpitVerdict={listing.immocockpitVerdict}
+                immocockpitAnalysis={listing.immocockpitAnalysis}
                 onRateWithAi={handleRateWithAI}
                 ratingInFlight={ratingInFlight}
                 ratingModel={ratingModel}

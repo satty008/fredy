@@ -14,6 +14,7 @@ import StatusControl from '../listings/StatusControl.jsx';
 import AffordabilityChip from '../listings/AffordabilityChip.jsx';
 import AiVerdictBadge from '../listings/AiVerdictBadge.jsx';
 import { rentIncludesCharges } from '../../services/finance/rentBasis.js';
+import ImmocockpitVerdictBadge from '../listings/ImmocockpitVerdictBadge.jsx';
 import PriceChangeBadge from '../listings/PriceChangeBadge.jsx';
 import PricePerSqmBadge from '../listings/PricePerSqmBadge.jsx';
 import ScamBadge from '../listings/ScamBadge.jsx';
@@ -130,6 +131,7 @@ const ListingsTable = ({
               <span className="listingsTable__row__empty">---</span>
             )}
             <AiVerdictBadge verdict={item.ai_verdict} />
+            <ImmocockpitVerdictBadge verdict={item.immocockpitVerdict} />
           </div>
 
           <div className="listingsTable__row__address">

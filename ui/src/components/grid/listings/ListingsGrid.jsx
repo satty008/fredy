@@ -17,6 +17,7 @@ import StatusControl from '../../listings/StatusControl.jsx';
 import AffordabilityChip from '../../listings/AffordabilityChip.jsx';
 import AiVerdictBadge from '../../listings/AiVerdictBadge.jsx';
 import { rentIncludesCharges } from '../../../services/finance/rentBasis.js';
+import ImmocockpitVerdictBadge from '../../listings/ImmocockpitVerdictBadge.jsx';
 import PriceChangeBadge from '../../listings/PriceChangeBadge.jsx';
 import PricePerSqmBadge from '../../listings/PricePerSqmBadge.jsx';
 import ScamBadge from '../../listings/ScamBadge.jsx';
@@ -135,6 +136,7 @@ const ListingsGrid = ({
                 </div>
               )}
               <AiVerdictBadge verdict={item.ai_verdict} />
+              <ImmocockpitVerdictBadge verdict={item.immocockpitVerdict} />
 
               {/* In the hidden view onNavigate refuses to go anywhere, so the title is not a link
                   there either - a link that leads nowhere is worse than plain text. */}

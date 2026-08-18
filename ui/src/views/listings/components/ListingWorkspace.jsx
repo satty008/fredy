@@ -5,6 +5,7 @@
 
 import { Button, Select, Tag, TextArea } from '@douyinfe/semi-ui-19';
 
+import ImmocockpitVerdictBadge from '../../../components/listings/ImmocockpitVerdictBadge.jsx';
 import AttachmentsCard from './AttachmentsCard.jsx';
 import { useTranslation } from '../../../services/i18n/i18n.jsx';
 import './ListingWorkspace.less';
@@ -25,6 +26,8 @@ import './ListingWorkspace.less';
  * @param {boolean} props.notesSaving
  * @param {boolean} props.notesDirty - Whether the draft differs from what is stored.
  * @param {('good'|'maybe'|'bad'|null)} [props.aiVerdict] - The stored AI review verdict, if any.
+ * @param {('good'|'maybe'|'bad'|null)} [props.immocockpitVerdict] - The server-computed Immocockpit verdict.
+ * @param {Object|null} [props.immocockpitAnalysis] - The numbers behind it, for the tooltip.
  * @param {() => void} [props.onRateWithAi]
  * @param {boolean} [props.ratingInFlight]
  * @param {string} [props.ratingModel]
@@ -40,6 +43,8 @@ export default function ListingWorkspace({
   notesSaving,
   notesDirty,
   aiVerdict = null,
+  immocockpitVerdict = null,
+  immocockpitAnalysis = null,
   onRateWithAi,
   ratingInFlight = false,
   ratingModel,
