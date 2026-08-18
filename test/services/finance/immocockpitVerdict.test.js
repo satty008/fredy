@@ -30,7 +30,7 @@ afterEach(() => {
 });
 
 describe('immocockpitVerdictFor', () => {
-  it('computes the same verdict immocockpit\'s own Fredy-handoff screening defaults would', () => {
+  it("computes the same verdict immocockpit's own Fredy-handoff screening defaults would", () => {
     // Hand-computed from immocockpit's computeEngine at 12 EUR/m2 * 60 m2 cold rent, 100%
     // financing at 4.2%/2%, married/EUR100k marginal tax 35.1%, NW's 6.5% Grunderwerbsteuer:
     // netYield ~2.87% (below both thresholds -> 0), cfAfterTax ~-359 EUR/mo (above the -517
