@@ -212,6 +212,8 @@
   "listings.immocockpitVerdictPrefix": "IC",
   "listings.immocockpitVerdictTooltip": "Immocockpit's buy-to-let verdict for this listing, using its own screening defaults (100% financing at 4.2%/2%, a €100k-taxable-income buyer profile). Based on the numbers only — open in Immocockpit or check the AI rating for a read of the photos and description.",
   "listings.immocockpitVerdictTooltipDetailed": "Gross yield {{grossYield}}%, net yield {{netYield}}%, cashflow after tax {{cashflow}}/mo, year-1 cash-on-cash {{equityReturn}}%, DSCR {{dscr}}x — assuming {{coldRentPerSqm}} €/m² cold rent, immocockpit's own screening-default financing (100% at 4.2%/2%, €100k-taxable-income buyer profile).",
+  "listings.priceFactorPrefix": "Factor",
+  "listings.priceFactorTooltip": "Kaufpreisfaktor: purchase price ÷ annual cold rent — {{factor}} years of rent to pay back the price. Same price and rent assumption as the IC badge, just expressed as a multiple instead of a percentage.",
   "listings.filterProviderHelp": "Show only listings coming from the selected real-estate provider (ImmoScout24, Kleinanzeigen, ...).",
   "listings.filterJobHelp": "Show only listings produced by the selected job.",
   "listings.filterSortHelp": "Choose the column to sort listings by. Use the arrow button to toggle ascending and descending order.",

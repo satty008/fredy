@@ -54,6 +54,7 @@ import Headline from '../../components/headline/Headline.jsx';
 import IconEuro from '../../components/icons/IconEuro.jsx';
 import StatusControl from '../../components/listings/StatusControl.jsx';
 import ImmocockpitVerdictBadge from '../../components/listings/ImmocockpitVerdictBadge.jsx';
+import PriceFactorBadge from '../../components/listings/PriceFactorBadge.jsx';
 import ListingFinanceCard from './components/ListingFinanceCard.jsx';
 import PriceHistoryChart from './components/PriceHistoryChart.jsx';
 import NearbyStops from '../../components/transit/NearbyStops.jsx';
@@ -656,6 +657,7 @@ export default function ListingDetail() {
                     </Tag>
                   )}
                   <ImmocockpitVerdictBadge verdict={listing.immocockpitVerdict} analysis={listing.immocockpitAnalysis} />
+                  <PriceFactorBadge analysis={listing.immocockpitAnalysis} />
                 </Space>
               </div>
               <TextArea

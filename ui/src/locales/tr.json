@@ -212,6 +212,8 @@
   "listings.immocockpitVerdictPrefix": "IC",
   "listings.immocockpitVerdictTooltip": "Immocockpit'in bu ilan için kendi tarama varsayılanlarını (%100 finansman, %4,2/%2 faiz/amortisman, 100.000 € vergiye tabi gelire sahip alıcı profili) kullanarak hesapladığı kiralık yatırım sonucu. Yalnızca sayılara dayanır — fotoğraf ve açıklama değerlendirmesi için Immocockpit'te açın veya AI değerlendirmesine bakın.",
   "listings.immocockpitVerdictTooltipDetailed": "Brüt getiri %{{grossYield}}, net getiri %{{netYield}}, vergi sonrası nakit akışı {{cashflow}}/ay, 1. yıl özkaynak getirisi %{{equityReturn}}, DSCR {{dscr}}x — {{coldRentPerSqm}} €/m² soğuk kira varsayımıyla, Immocockpit'in kendi tarama varsayılan finansmanı (%100, %4,2/%2 faiz/amortisman, 100.000 € vergiye tabi gelire sahip alıcı profili).",
+  "listings.priceFactorPrefix": "Faktör",
+  "listings.priceFactorTooltip": "Kaufpreisfaktor (satın alma faktörü): satın alma fiyatı ÷ yıllık soğuk kira — fiyatı geri kazanmak için {{factor}} yıllık kira gerekir. IC rozetiyle aynı fiyat ve kira varsayımı, sadece yüzde yerine kat olarak ifade edilir.",
   "listings.filterProviderHelp": "Yalnızca seçilen emlak sağlayıcısından (ImmoScout24, Kleinanzeigen, ...) gelen ilanları gösterin.",
   "listings.filterJobHelp": "Yalnızca seçilen iş tarafından üretilen ilanları gösterin.",
   "listings.filterSortHelp": "İlanları sıralamak için sütunu seçin. Artan ve azalan sırayı değiştirmek için ok düğmesini kullanın.",
