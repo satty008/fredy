@@ -1,7 +1,7 @@
 services:
   fredy:
     container_name: fredy
-    image: ghcr.io/satty008/fredy:roi-filter
+    image: ghcr.io/satty008/fredy:master
     pull_policy: always
     environment:
       - NODE_ENV=production
