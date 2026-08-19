@@ -63,6 +63,22 @@ export const FILTER_KEYS = [
 ];
 
 /**
+ * Normalizes a filter value that may be a single id/verdict or an array of them (aiVerdict,
+ * icVerdict and job are multi-select; every other filter here stays single-valued) into a plain
+ * array, so the two call sites below that need to iterate don't each have to know which shape a
+ * given filter happens to be.
+ *
+ * @param {*} value
+ * @returns {Array}
+ */
+function toList(value) {
+  if (value == null) {
+    return [];
+  }
+  return Array.isArray(value) ? value : [value];
+}
+
+/**
  * Whether a filter is doing something.
  *
  * @param {string} key
@@ -75,7 +91,13 @@ export function isActiveFilter(key, values) {
   if (key === 'active' && values.hidden === true) {
     return false;
   }
-  return values[key] !== NEUTRAL[key];
+  const value = values[key];
+  // A multi-select filter (aiVerdict, icVerdict, job) is "on" once it holds at least one value;
+  // an empty array reads the same as the neutral `null` it started from.
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+  return value !== NEUTRAL[key];
 }
 
 /**
@@ -164,20 +186,26 @@ export function describeActiveFilters(values, { t, jobs = [], providers = [] }) 
         accepted: t('listings.filterStatusAccepted'),
         none: t('listings.filterStatusNone'),
       })[values.status] ?? values.status,
-    aiVerdict: () =>
-      ({
-        good: t('listings.filterAiVerdictGood'),
-        maybe: t('listings.filterAiVerdictMaybe'),
-        bad: t('listings.filterAiVerdictBad'),
-        none: t('listings.filterAiVerdictUnrated'),
-      })[values.aiVerdict] ?? values.aiVerdict,
-    icVerdict: () =>
-      ({
-        good: t('listings.filterImmocockpitVerdictGood'),
-        maybe: t('listings.filterImmocockpitVerdictMaybe'),
-        bad: t('listings.filterImmocockpitVerdictBad'),
-        none: t('listings.filterIcVerdictUnavailable'),
-      })[values.icVerdict] ?? values.icVerdict,
+    aiVerdict: () => {
+      const label = (v) =>
+        ({
+          good: t('listings.filterAiVerdictGood'),
+          maybe: t('listings.filterAiVerdictMaybe'),
+          bad: t('listings.filterAiVerdictBad'),
+          none: t('listings.filterAiVerdictUnrated'),
+        })[v] ?? v;
+      return toList(values.aiVerdict).map(label).join(', ');
+    },
+    icVerdict: () => {
+      const label = (v) =>
+        ({
+          good: t('listings.filterImmocockpitVerdictGood'),
+          maybe: t('listings.filterImmocockpitVerdictMaybe'),
+          bad: t('listings.filterImmocockpitVerdictBad'),
+          none: t('listings.filterIcVerdictUnavailable'),
+        })[v] ?? v;
+      return toList(values.icVerdict).map(label).join(', ');
+    },
     afford: () =>
       ({
         affordable: t('listings.filterAffordabilityYes'),
@@ -194,7 +222,10 @@ export function describeActiveFilters(values, { t, jobs = [], providers = [] }) 
           });
     },
     provider: () => named(providers, values.provider),
-    job: () => named(jobs, values.job),
+    job: () =>
+      toList(values.job)
+        .map((id) => named(jobs, id))
+        .join(', '),
   };
 
   return FILTER_KEYS.filter((key) => isActiveFilter(key, values)).map((key) => ({
@@ -215,7 +246,8 @@ export function describeActiveFilters(values, { t, jobs = [], providers = [] }) 
  *
  * @param {{id: string, name: string}[]} [providers]
  * @param {Array<{id: string, name?: string, provider?: Array<{id?: string, name?: string}>}>} [jobs]
- * @param {string|null} [selectedJobId]
+ * @param {string|string[]|null} [selectedJobId] One job id, or several now that the job filter is
+ *   multi-select.
  * @param {string|null} [currentProviderId]
  * @param {string[]|null} [availableProviders] Distinct provider IDs that have results
  * @returns {{id: string, name: string}[]}
@@ -244,7 +276,11 @@ export function filterConfiguredProviders(
     return providers;
   }
 
-  const relevantJobs = selectedJobId ? jobs.filter((j) => j?.id === selectedJobId || j?.name === selectedJobId) : jobs;
+  const selectedJobIds = toList(selectedJobId);
+  const relevantJobs =
+    selectedJobIds.length > 0
+      ? jobs.filter((j) => selectedJobIds.includes(j?.id) || selectedJobIds.includes(j?.name))
+      : jobs;
 
   const targetJobs = relevantJobs.length > 0 ? relevantJobs : jobs;
 

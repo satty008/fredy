@@ -4,7 +4,13 @@
  */
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useUrlState, parseNumber, parseString, parseNullableBoolean } from '../../hooks/useSearchParamState.js';
+import {
+  useUrlState,
+  parseNumber,
+  parseString,
+  parseNullableBoolean,
+  parseStringArray,
+} from '../../hooks/useSearchParamState.js';
 import { Button, Pagination, Toast, Input, Select, Empty, Tooltip, Banner } from '@douyinfe/semi-ui-19';
 import {
   IconSearch,
@@ -71,12 +77,14 @@ const LISTINGS_URL_STATE = {
   dir: { defaultValue: 'desc', codec: parseString },
   q: { defaultValue: null, codec: parseString },
   watch: { defaultValue: null, codec: parseNullableBoolean },
-  job: { defaultValue: null, codec: parseString },
+  // Multi-select: several jobs/verdicts at once, comma-separated in the URL - see
+  // parseStringArray.
+  job: { defaultValue: null, codec: parseStringArray },
   active: { defaultValue: true, codec: parseNullableBoolean },
   provider: { defaultValue: null, codec: parseString },
   status: { defaultValue: null, codec: parseString },
-  aiVerdict: { defaultValue: null, codec: parseString },
-  icVerdict: { defaultValue: null, codec: parseString },
+  aiVerdict: { defaultValue: null, codec: parseStringArray },
+  icVerdict: { defaultValue: null, codec: parseStringArray },
   afford: { defaultValue: null, codec: parseString },
   // Mode and ceiling in one key, as `transit:30`. Two keys would let a bookmarked URL carry half a
   // filter, which the server would then have to guess the other half of.
@@ -93,6 +101,18 @@ const LISTINGS_URL_STATE = {
 function toTravelTimeQuery(value) {
   const parsed = parseCommuteFilter(value);
   return parsed == null ? null : { travelTimeMode: parsed.mode, travelTimeMaxMinutes: parsed.maxMinutes };
+}
+
+/**
+ * A multi-select filter's value (job, aiVerdict, icVerdict) lives in state as an array, but the
+ * API query string is one flat parameter per filter - so it travels as the same comma-separated
+ * form the URL already uses, and the server splits it back apart.
+ *
+ * @param {string[]|null} value
+ * @returns {string|null}
+ */
+function toCommaParam(value) {
+  return Array.isArray(value) && value.length > 0 ? value.join(',') : null;
 }
 
 const ListingsOverview = () => {
@@ -182,12 +202,12 @@ const ListingsOverview = () => {
       freeTextFilter,
       filter: {
         watchListFilter,
-        jobNameFilter,
+        jobNameFilter: toCommaParam(jobNameFilter),
         activityFilter: isHiddenView ? null : activityFilter,
         providerFilter,
         statusFilter,
-        aiVerdictFilter,
-        icVerdictFilter,
+        aiVerdictFilter: toCommaParam(aiVerdictFilter),
+        icVerdictFilter: toCommaParam(icVerdictFilter),
         // The server turns this into a price range from the saved profile; it ignores the
         // filter entirely when there is no profile to derive one from.
         affordabilityFilter,
