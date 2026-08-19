@@ -118,7 +118,7 @@ const ListingsGrid = ({
                   />
                 </div>
                 <AiVerdictBadge verdict={item.ai_verdict} />
-                <ImmocockpitVerdictBadge verdict={item.immocockpitVerdict} />
+                <ImmocockpitVerdictBadge verdict={item.immocockpitVerdict} analysis={item.immocockpitAnalysis} />
               </div>
             )}
             {item.address && (

@@ -39,10 +39,13 @@ describe('immocockpitVerdictFor', () => {
     const result = immocockpitVerdictFor(BUY_LISTING);
     expect(result.verdict).toBe('maybe');
     expect(result.score).toBe(3);
+    expect(result.grossYieldPercent).toBeCloseTo(4.32, 2);
     expect(result.netYieldPercent).toBeCloseTo(2.87, 1);
     expect(result.cfAfterTaxMonthly).toBeCloseTo(-358.93, 0);
     expect(result.equityReturnPercent).toBeCloseTo(17.3, 0);
     expect(result.dscr).toBeCloseTo(0.836, 2);
+    // The 12 EUR/m2 fixture value from beforeEach, round-tripped through coldRent/size.
+    expect(result.coldRentPerSqm).toBeCloseTo(12, 5);
   });
 
   it('returns null for a rental job - immocockpit only models a purchase', () => {

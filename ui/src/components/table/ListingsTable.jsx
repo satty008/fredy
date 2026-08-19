@@ -89,7 +89,7 @@ const ListingsTable = ({
                   />
                 </div>
                 <AiVerdictBadge verdict={item.ai_verdict} />
-                <ImmocockpitVerdictBadge verdict={item.immocockpitVerdict} />
+                <ImmocockpitVerdictBadge verdict={item.immocockpitVerdict} analysis={item.immocockpitAnalysis} />
               </>
             ) : (
               <span className="listingsTable__row__empty">---</span>

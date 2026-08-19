@@ -33,6 +33,7 @@ export const NEUTRAL = {
   provider: null,
   status: null,
   aiVerdict: null,
+  icVerdict: null,
   afford: null,
   commute: null,
   hidden: false,
@@ -48,7 +49,18 @@ export const NEUTRAL = {
  *
  * @type {string[]}
  */
-export const FILTER_KEYS = ['hidden', 'active', 'watch', 'status', 'aiVerdict', 'afford', 'commute', 'provider', 'job'];
+export const FILTER_KEYS = [
+  'hidden',
+  'active',
+  'watch',
+  'status',
+  'aiVerdict',
+  'icVerdict',
+  'afford',
+  'commute',
+  'provider',
+  'job',
+];
 
 /**
  * Whether a filter is doing something.
@@ -159,6 +171,13 @@ export function describeActiveFilters(values, { t, jobs = [], providers = [] }) 
         bad: t('listings.filterAiVerdictBad'),
         none: t('listings.filterAiVerdictUnrated'),
       })[values.aiVerdict] ?? values.aiVerdict,
+    icVerdict: () =>
+      ({
+        good: t('listings.filterImmocockpitVerdictGood'),
+        maybe: t('listings.filterImmocockpitVerdictMaybe'),
+        bad: t('listings.filterImmocockpitVerdictBad'),
+        none: t('listings.filterIcVerdictUnavailable'),
+      })[values.icVerdict] ?? values.icVerdict,
     afford: () =>
       ({
         affordable: t('listings.filterAffordabilityYes'),

@@ -132,6 +132,20 @@ export default function ListingsFilterPanel({
           <Select.Option value="bad">{t('listings.filterAiVerdictBad')}</Select.Option>
           <Select.Option value="none">{t('listings.filterAiVerdictUnrated')}</Select.Option>
         </FilterSelect>
+
+        <FilterSelect
+          help={t('listings.filterIcVerdictHelp')}
+          placeholder={t('listings.filterIcVerdictPlaceholder')}
+          showClear
+          onChange={(val) => onChange({ icVerdict: val ?? null, page: 1 })}
+          value={values.icVerdict}
+          style={{ width: '100%' }}
+        >
+          <Select.Option value="good">{t('listings.filterImmocockpitVerdictGood')}</Select.Option>
+          <Select.Option value="maybe">{t('listings.filterImmocockpitVerdictMaybe')}</Select.Option>
+          <Select.Option value="bad">{t('listings.filterImmocockpitVerdictBad')}</Select.Option>
+          <Select.Option value="none">{t('listings.filterIcVerdictUnavailable')}</Select.Option>
+        </FilterSelect>
       </FilterGroup>
 
       {(financeComplete || hasAddresses) && (

@@ -76,6 +76,7 @@ const LISTINGS_URL_STATE = {
   provider: { defaultValue: null, codec: parseString },
   status: { defaultValue: null, codec: parseString },
   aiVerdict: { defaultValue: null, codec: parseString },
+  icVerdict: { defaultValue: null, codec: parseString },
   afford: { defaultValue: null, codec: parseString },
   // Mode and ceiling in one key, as `transit:30`. Two keys would let a bookmarked URL carry half a
   // filter, which the server would then have to guess the other half of.
@@ -129,6 +130,7 @@ const ListingsOverview = () => {
     provider: providerFilter,
     status: statusFilter,
     aiVerdict: aiVerdictFilter,
+    icVerdict: icVerdictFilter,
     afford: affordabilityFilter,
     commute: commuteFilter,
     hidden: hiddenOnly,
@@ -185,6 +187,7 @@ const ListingsOverview = () => {
         providerFilter,
         statusFilter,
         aiVerdictFilter,
+        icVerdictFilter,
         // The server turns this into a price range from the saved profile; it ignores the
         // filter entirely when there is no profile to derive one from.
         affordabilityFilter,
@@ -213,6 +216,7 @@ const ListingsOverview = () => {
     watchListFilter,
     statusFilter,
     aiVerdictFilter,
+    icVerdictFilter,
     affordabilityFilter,
     commuteFilter,
     hiddenOnly,
