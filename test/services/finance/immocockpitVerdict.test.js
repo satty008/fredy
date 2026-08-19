@@ -32,18 +32,19 @@ afterEach(() => {
 describe('immocockpitVerdictFor', () => {
   it("computes the same verdict immocockpit's own Fredy-handoff screening defaults would", () => {
     // Hand-computed from immocockpit's computeEngine at 12 EUR/m2 * 60 m2 cold rent, 100%
-    // financing at 4.2%/2%, married/EUR100k marginal tax 35.1%, NW's 6.5% Grunderwerbsteuer:
-    // netYield ~2.87% (below both thresholds -> 0), cfAfterTax ~-359 EUR/mo (above the -517
-    // yellow line -> 1), year-1 cash-on-cash ~17.3% (above the 8% green line -> 2), DSCR ~0.84
-    // (below 1.0 -> 0). Score 3 -> "maybe".
+    // financing at 4.6%/2%, married/EUR100k marginal tax 35.1%, NW's 6.5% Grunderwerbsteuer:
+    // netYield ~2.87% (below both thresholds -> 0), cfAfterTax ~-402 EUR/mo (above the -550
+    // yellow line -> 1), year-1 cash-on-cash ~15.1% (above the 8% green line -> 2), DSCR ~0.79
+    // (below 1.0 -> 0). Score 3 -> "maybe". Yield/factor/coldRentPerSqm don't depend on the loan
+    // rate at all, so they're unchanged from before the 4.2% -> 4.6% update.
     const result = immocockpitVerdictFor(BUY_LISTING);
     expect(result.verdict).toBe('maybe');
     expect(result.score).toBe(3);
     expect(result.grossYieldPercent).toBeCloseTo(4.32, 2);
     expect(result.netYieldPercent).toBeCloseTo(2.87, 1);
-    expect(result.cfAfterTaxMonthly).toBeCloseTo(-358.93, 0);
-    expect(result.equityReturnPercent).toBeCloseTo(17.3, 0);
-    expect(result.dscr).toBeCloseTo(0.836, 2);
+    expect(result.cfAfterTaxMonthly).toBeCloseTo(-402.19, 0);
+    expect(result.equityReturnPercent).toBeCloseTo(15.15, 0);
+    expect(result.dscr).toBeCloseTo(0.785, 2);
     // The 12 EUR/m2 fixture value from beforeEach, round-tripped through coldRent/size.
     expect(result.coldRentPerSqm).toBeCloseTo(12, 5);
     // 200000 / (720 * 12) = 23.15 - between the 20/25 green/yellow tier boundaries.
