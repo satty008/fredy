@@ -25,8 +25,10 @@ import './ImmocockpitVerdictBadge.less';
  *
  * @param {Object} props
  * @param {'good'|'maybe'|'bad'|null} [props.verdict] From the listings query (immocockpitVerdict).
- * @param {{ netYieldPercent: number, cfAfterTaxMonthly: number, equityReturnPercent: number, dscr: number }|null} [props.analysis]
- *   The full computation, when available (listing detail page only) - powers a richer tooltip.
+ * @param {{ grossYieldPercent: number, netYieldPercent: number, cfAfterTaxMonthly: number,
+ *   equityReturnPercent: number, dscr: number, coldRentPerSqm: number }|null} [props.analysis]
+ *   The full computation, when available (immocockpitAnalysis - rides with every listing row the
+ *   same way immocockpitVerdict does) - powers a richer tooltip with the numbers behind the verdict.
  */
 export default function ImmocockpitVerdictBadge({ verdict, analysis }) {
   const t = useTranslation();
@@ -40,10 +42,12 @@ export default function ImmocockpitVerdictBadge({ verdict, analysis }) {
   const label = t(`listings.filterImmocockpitVerdict${verdict[0].toUpperCase()}${verdict.slice(1)}`);
   const tooltip = analysis
     ? t('listings.immocockpitVerdictTooltipDetailed', {
+        grossYield: analysis.grossYieldPercent.toFixed(1),
         netYield: analysis.netYieldPercent.toFixed(1),
         cashflow: formatEuro(Math.round(analysis.cfAfterTaxMonthly), locale),
         equityReturn: analysis.equityReturnPercent.toFixed(1),
         dscr: analysis.dscr.toFixed(2),
+        coldRentPerSqm: analysis.coldRentPerSqm.toFixed(2),
       })
     : t('listings.immocockpitVerdictTooltip');
 

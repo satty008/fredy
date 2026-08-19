@@ -136,7 +136,7 @@ const ListingsGrid = ({
                 </div>
               )}
               <AiVerdictBadge verdict={item.ai_verdict} />
-              <ImmocockpitVerdictBadge verdict={item.immocockpitVerdict} />
+              <ImmocockpitVerdictBadge verdict={item.immocockpitVerdict} analysis={item.immocockpitAnalysis} />
 
               {/* In the hidden view onNavigate refuses to go anywhere, so the title is not a link
                   there either - a link that leads nowhere is worse than plain text. */}
