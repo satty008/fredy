@@ -50,6 +50,7 @@ export default function JobMutator() {
     { key: 'maxPrice', translation: t('jobs.mutation.filterMaxPrice') },
     { key: 'minSize', translation: t('jobs.mutation.filterMinSize') },
     { key: 'minRooms', translation: t('jobs.mutation.filterMinRooms') },
+    { key: 'minRoiPercent', translation: t('jobs.mutation.filterMinRoi') },
   ];
 
   const jobs = useSelector((state) => state.jobsData.jobs);

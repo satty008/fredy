@@ -26,7 +26,7 @@
 
   &__row {
     display: grid;
-    grid-template-columns: 56px 1fr 140px 200px 120px 110px auto;
+    grid-template-columns: 24px 56px 1fr 140px 200px 120px 110px auto;
     align-items: center;
     gap: @space-3;
     padding: 8px 12px;
@@ -42,6 +42,17 @@
 
     &--inactive {
       opacity: 0.6;
+    }
+
+    &__select {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      .semi-checkbox {
+        margin: 0;
+        padding: 0;
+      }
     }
 
     &__thumb {
@@ -73,12 +84,18 @@
       font-weight: 600;
       color: @color-success;
       display: flex;
-      align-items: center;
-      justify-content: flex-end;
+      flex-direction: column;
+      align-items: flex-end;
       gap: 4px;
       white-space: nowrap;
       text-align: right;
       font-variant-numeric: tabular-nums;
+
+      &__main {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
     }
 
     &__address {
@@ -154,7 +171,7 @@
     }
 
     @media (max-width: 900px) {
-      grid-template-columns: 56px 1fr 120px auto;
+      grid-template-columns: 24px 56px 1fr 120px auto;
 
       .listingsTable__row__address,
       .listingsTable__row__meta,
@@ -164,7 +181,7 @@
     }
 
     @media (max-width: 560px) {
-      grid-template-columns: 56px 1fr auto;
+      grid-template-columns: 24px 56px 1fr auto;
 
       .listingsTable__row__price {
         display: none;

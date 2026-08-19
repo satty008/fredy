@@ -124,11 +124,13 @@ describe('queryListings affordabilityBand', () => {
     });
 
     const { sql, params } = pageQuery();
-    expect(sql).toContain('l.job_id = @jobId');
+    // Single job id still goes through the IN-clause builder shared with the multi-select job
+    // filter, so a lone id lands in an IN of one rather than an `=`.
+    expect(sql).toContain('l.job_id IN (@jobId0)');
     expect(sql).toContain("json_extract(l.status, '$.status') = @statusValue");
     expect(sql).toContain('l.is_active = 1');
     expect(sql).toContain('@affMin_buy');
-    expect(params).toMatchObject({ jobId: 'job-1', statusValue: 'applied', affMin_buy: 30000 });
+    expect(params).toMatchObject({ jobId0: 'job-1', statusValue: 'applied', affMin_buy: 30000 });
   });
 
   it('keeps the user scoping clause in place', () => {

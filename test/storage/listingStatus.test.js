@@ -131,6 +131,102 @@ describe('listingsStorage.queryListings statusFilter', () => {
   });
 });
 
+describe('listingsStorage.setListingAiVerdict', () => {
+  let listingsStorage;
+
+  beforeEach(async () => {
+    calls.execute.length = 0;
+    calls.query.length = 0;
+    sqliteMock.__queryHandler = null;
+    listingsStorage = await import('../../lib/services/storage/listingsStorage.js');
+  });
+
+  it('runs an UPDATE storing the lower-cased verdict', () => {
+    const changes = listingsStorage.setListingAiVerdict('listing-1', 'GOOD');
+    expect(changes).toBe(1);
+    expect(calls.execute).toHaveLength(1);
+    expect(calls.execute[0].sql).toMatch(/UPDATE listings SET ai_verdict = @verdict WHERE id = @id/);
+    expect(calls.execute[0].params).toEqual({ id: 'listing-1', verdict: 'good' });
+  });
+
+  it('accepts null to clear the verdict', () => {
+    listingsStorage.setListingAiVerdict('listing-2', null);
+    expect(calls.execute[0].params).toEqual({ id: 'listing-2', verdict: null });
+  });
+
+  it('rejects invalid verdicts', () => {
+    expect(() => listingsStorage.setListingAiVerdict('listing-3', 'excellent')).toThrow(/Invalid AI verdict/);
+    expect(calls.execute).toHaveLength(0);
+  });
+
+  it('returns 0 when no id is supplied (no SQL is run)', () => {
+    const result = listingsStorage.setListingAiVerdict(null, 'good');
+    expect(result).toBe(0);
+    expect(calls.execute).toHaveLength(0);
+  });
+});
+
+describe('listingsStorage.queryListings aiVerdictFilter', () => {
+  let listingsStorage;
+
+  beforeEach(async () => {
+    calls.execute.length = 0;
+    calls.query.length = 0;
+    sqliteMock.__queryHandler = (sql) => {
+      if (/COUNT\(1\)/.test(sql)) return [{ cnt: 0 }];
+      return [];
+    };
+    listingsStorage = await import('../../lib/services/storage/listingsStorage.js');
+  });
+
+  it("adds 'l.ai_verdict IS NULL' to WHERE when aiVerdictFilter is 'none'", () => {
+    listingsStorage.queryListings({ aiVerdictFilter: 'none', userId: 'u1', isAdmin: true });
+    const pageQuery = calls.query.find((c) => !/COUNT\(1\)/.test(c.sql));
+    expect(pageQuery.sql).toMatch(/\(l\.ai_verdict IS NULL\)/);
+  });
+
+  it('filters by equality for a concrete verdict', () => {
+    listingsStorage.queryListings({ aiVerdictFilter: 'maybe', userId: 'u1', isAdmin: true });
+    const pageQuery = calls.query.find((c) => !/COUNT\(1\)/.test(c.sql));
+    // A single verdict still goes through the same IN-clause builder the multi-select filter
+    // uses, so it lands in an IN of one rather than an `=`.
+    expect(pageQuery.sql).toMatch(/\(l\.ai_verdict IN \(@aiVerdictValue0\)\)/);
+    expect(pageQuery.params.aiVerdictValue0).toBe('maybe');
+  });
+
+  it('ignores unknown aiVerdictFilter values silently', () => {
+    listingsStorage.queryListings({ aiVerdictFilter: 'bogus', userId: 'u1', isAdmin: true });
+    const pageQuery = calls.query.find((c) => !/COUNT\(1\)/.test(c.sql));
+    expect(pageQuery.sql).not.toMatch(/ai_verdict/i);
+  });
+});
+
+describe('listingsStorage.queryListings grossYieldPercent', () => {
+  beforeEach(async () => {
+    calls.execute.length = 0;
+    calls.query.length = 0;
+  });
+
+  it('attaches a rounded grossYieldPercent to each returned row when computable', async () => {
+    vi.resetModules();
+    vi.doMock('../../lib/services/finance/rentYield.js', () => ({
+      grossYieldPercent: (row) => (row.id === 'a' ? 5.6789 : null),
+      // netYieldPercent isn't under test here, but parseListingStatus calls it unconditionally,
+      // so a mock that omits it breaks every test that imports listingsStorage.js afterward.
+      netYieldPercent: () => null,
+    }));
+    const freshStorage = await import('../../lib/services/storage/listingsStorage.js');
+    sqliteMock.__queryHandler = (sql) => {
+      if (/COUNT\(1\)/.test(sql)) return [{ cnt: 2 }];
+      return [{ id: 'a' }, { id: 'b' }];
+    };
+    const result = freshStorage.queryListings({ userId: 'u1', isAdmin: true });
+    expect(result.result[0].grossYieldPercent).toBe(5.7);
+    expect(result.result[1].grossYieldPercent).toBeNull();
+    vi.doUnmock('../../lib/services/finance/rentYield.js');
+  });
+});
+
 describe('listingsStorage.queryListings hiddenOnly', () => {
   let listingsStorage;
 
@@ -155,6 +251,34 @@ describe('listingsStorage.queryListings hiddenOnly', () => {
     const pageQuery = calls.query.find((c) => !/COUNT\(1\)/.test(c.sql));
     expect(pageQuery.sql).toMatch(/\(l\.manually_deleted = 1\)/);
     expect(pageQuery.sql).not.toMatch(/\(l\.manually_deleted = 0\)/);
+  });
+});
+
+describe('listingsStorage.getAvailableProviders', () => {
+  let listingsStorage;
+
+  beforeEach(async () => {
+    calls.execute.length = 0;
+    calls.query.length = 0;
+    sqliteMock.__queryHandler = null;
+    listingsStorage = await import('../../lib/services/storage/listingsStorage.js');
+  });
+
+  it('queries distinct providers excluding manually deleted by default', () => {
+    sqliteMock.__queryHandler = () => [{ provider: 'immoscout' }, { provider: 'immowelt' }];
+    const result = listingsStorage.getAvailableProviders({ userId: 'u1', isAdmin: true });
+    expect(result).toEqual(['immoscout', 'immowelt']);
+    expect(calls.query[0].sql).toMatch(/SELECT DISTINCT l\.provider/);
+    expect(calls.query[0].sql).toMatch(/\(l\.manually_deleted = 0\)/);
+  });
+
+  it('filters by jobId when jobId is provided', () => {
+    sqliteMock.__queryHandler = () => [{ provider: 'immoscout' }];
+    const result = listingsStorage.getAvailableProviders({ jobId: 'job-1', userId: 'u1', isAdmin: true });
+    expect(result).toEqual(['immoscout']);
+    // Single job id, same IN-clause builder the multi-select job filter uses.
+    expect(calls.query[0].sql).toMatch(/\(l\.job_id IN \(@jobId0\)\)/);
+    expect(calls.query[0].params.jobId0).toBe('job-1');
   });
 });
 

@@ -11,8 +11,11 @@ vi.mock('../../lib/services/storage/userStorage.js', () => ({
 }));
 // security.js reads sessionTTL at import time. An empty settings object exercises the default.
 vi.mock('../../lib/services/storage/settingsStorage.js', () => ({ getSettings: vi.fn(async () => ({})) }));
+// authHook's bearer-token fallback delegates token validation to the MCP auth module.
+vi.mock('../../lib/mcp/mcpAuthentication.js', () => ({ authenticateRequest: vi.fn() }));
 
 import { getUser } from '../../lib/services/storage/userStorage.js';
+import { authenticateRequest } from '../../lib/mcp/mcpAuthentication.js';
 import { isUnauthorized, isAdmin, authHook, adminHook, touchSession } from '../../lib/api/security.js';
 
 const SESSION_MAX_AGE = 2 * 60 * 60 * 1000; // the default applied when sessionTTL is unset
@@ -199,6 +202,55 @@ describe('authHook', () => {
     await authHook({ session }, makeReply());
 
     expect(session.createdAt).toBe(before);
+  });
+
+  it('authenticates via a valid MCP bearer token when there is no session', async () => {
+    authenticateRequest.mockReturnValue({ userId: 'user-1' });
+    getUser.mockReturnValue({ id: 'user-1', isAdmin: false });
+    const request = { session: {}, headers: { authorization: 'Bearer fredy_abc' } };
+    const reply = makeReply();
+
+    const result = await authHook(request, reply);
+
+    expect(result).toBeUndefined();
+    expect(reply.sent).toBe(false);
+    expect(request.session.currentUser).toBe('user-1');
+    expect(Date.now() - request.session.createdAt).toBeLessThan(1000);
+    // isAdmin now reads request.currentUser rather than querying again, so bearer auth has to
+    // populate it too - otherwise every admin-gated route would 401 a valid bearer-token caller.
+    expect(request.currentUser).toEqual({ id: 'user-1', isAdmin: false });
+  });
+
+  it('rejects with 401 when the bearer token does not resolve to a user', async () => {
+    authenticateRequest.mockReturnValue(null);
+    const request = { session: {}, headers: { authorization: 'Bearer bogus' } };
+    const reply = makeReply();
+
+    const result = await authHook(request, reply);
+
+    expect(result).toBe(reply);
+    expect(reply.statusCode).toBe(401);
+  });
+
+  it('rejects with 401 when the bearer token resolves to a userId with no matching user', async () => {
+    authenticateRequest.mockReturnValue({ userId: 'ghost' });
+    getUser.mockReturnValue(undefined);
+    const request = { session: {}, headers: { authorization: 'Bearer fredy_abc' } };
+    const reply = makeReply();
+
+    const result = await authHook(request, reply);
+
+    expect(result).toBe(reply);
+    expect(reply.statusCode).toBe(401);
+  });
+
+  it('does not attempt bearer auth when the request has no headers (existing session-only callers)', async () => {
+    const reply = makeReply();
+    const result = await authHook({ session: expiredSession() }, reply);
+
+    expect(result).toBe(reply);
+    expect(reply.statusCode).toBe(401);
+    expect(authenticateRequest).not.toHaveBeenCalled();
   });
 });
 

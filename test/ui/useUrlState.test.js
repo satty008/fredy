@@ -15,7 +15,7 @@ vi.mock('react', () => ({
   useCallback: (fn) => fn,
 }));
 
-const { useUrlState, parseNumber, parseString, parseNullableBoolean, parseBoolean } =
+const { useUrlState, parseNumber, parseString, parseNullableBoolean, parseBoolean, parseStringArray } =
   await import('../../ui/src/hooks/useSearchParamState.js');
 
 const SCHEMA = {
@@ -155,6 +155,50 @@ describe('useUrlState', () => {
         useUrlState([state.params, freshSetter], SCHEMA).setValue('q', value);
       }
       expect(state.params.get('q')).toBe('c');
+    });
+  });
+
+  describe('parseStringArray - the multi-select filters (job, aiVerdict, icVerdict)', () => {
+    const MULTI_SCHEMA = { verdict: { defaultValue: null, codec: parseStringArray } };
+
+    it('decodes a comma-separated param into an array', () => {
+      const { pair } = makeSearchParams('verdict=good,maybe');
+      expect(useUrlState(pair(), MULTI_SCHEMA).values.verdict).toEqual(['good', 'maybe']);
+    });
+
+    it('falls back to null when the param is absent, not an empty array', () => {
+      const { pair } = makeSearchParams();
+      expect(useUrlState(pair(), MULTI_SCHEMA).values.verdict).toBe(null);
+    });
+
+    it('writes an array as a comma-joined param', () => {
+      const { pair, state } = makeSearchParams();
+      useUrlState(pair(), MULTI_SCHEMA).setValue('verdict', ['good', 'bad']);
+      expect(state.params.get('verdict')).toBe('good,bad');
+    });
+
+    it('drops the param when the array is cleared back to empty, rather than writing "verdict="', () => {
+      const { pair, state } = makeSearchParams('verdict=good');
+      useUrlState(pair(), MULTI_SCHEMA).setValue('verdict', []);
+      expect(state.params.has('verdict')).toBe(false);
+    });
+
+    it('drops the param when set back to null', () => {
+      const { pair, state } = makeSearchParams('verdict=good,maybe');
+      useUrlState(pair(), MULTI_SCHEMA).setValue('verdict', null);
+      expect(state.params.has('verdict')).toBe(false);
+    });
+
+    it('ignores blank entries and surrounding whitespace, so a stray comma cannot fabricate a value', () => {
+      const { pair } = makeSearchParams('verdict=' + encodeURIComponent(' good ,,maybe'));
+      expect(useUrlState(pair(), MULTI_SCHEMA).values.verdict).toEqual(['good', 'maybe']);
+    });
+
+    it('round-trips a single selection the same as a scalar filter would', () => {
+      const { pair, state } = makeSearchParams();
+      useUrlState(pair(), MULTI_SCHEMA).setValue('verdict', ['good']);
+      expect(state.params.get('verdict')).toBe('good');
+      expect(useUrlState([state.params, vi.fn()], MULTI_SCHEMA).values.verdict).toEqual(['good']);
     });
   });
 });

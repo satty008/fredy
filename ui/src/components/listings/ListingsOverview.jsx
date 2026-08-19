@@ -4,7 +4,13 @@
  */
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useUrlState, parseNumber, parseString, parseNullableBoolean } from '../../hooks/useSearchParamState.js';
+import {
+  useUrlState,
+  parseNumber,
+  parseString,
+  parseNullableBoolean,
+  parseStringArray,
+} from '../../hooks/useSearchParamState.js';
 import { Button, Pagination, Toast, Input, Select, Empty, Tooltip, Banner } from '@douyinfe/semi-ui-19';
 import {
   IconSearch,
@@ -49,6 +55,18 @@ import { formatEuro } from '../cards/chartTheme.js';
 const LISTINGS_PAGE_SIZE = 40;
 
 /**
+ * Models the AI rater is allowed to run with. Kept in sync by hand with the allowlists in
+ * lib/api/routes/listingsRouter.js and the fredy-rater webhook.js, which live outside this repo.
+ * @type {{ value: string, label: string }[]}
+ */
+const RATING_MODELS = [
+  { value: 'claude-sonnet-5', label: 'Sonnet 5' },
+  { value: 'claude-opus-5', label: 'Opus 5' },
+  { value: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5' },
+];
+const DEFAULT_RATING_MODEL = 'claude-sonnet-5';
+
+/**
  * Every filter this page keeps in the URL, with its default and its codec.
  *
  * Module scope so its identity is stable: {@link useUrlState} memoizes on it.
@@ -59,10 +77,14 @@ const LISTINGS_URL_STATE = {
   dir: { defaultValue: 'desc', codec: parseString },
   q: { defaultValue: null, codec: parseString },
   watch: { defaultValue: null, codec: parseNullableBoolean },
-  job: { defaultValue: null, codec: parseString },
+  // Multi-select: several jobs/verdicts at once, comma-separated in the URL - see
+  // parseStringArray.
+  job: { defaultValue: null, codec: parseStringArray },
   active: { defaultValue: true, codec: parseNullableBoolean },
   provider: { defaultValue: null, codec: parseString },
   status: { defaultValue: null, codec: parseString },
+  aiVerdict: { defaultValue: null, codec: parseStringArray },
+  icVerdict: { defaultValue: null, codec: parseStringArray },
   afford: { defaultValue: null, codec: parseString },
   // Mode and ceiling in one key, as `transit:30`. Two keys would let a bookmarked URL carry half a
   // filter, which the server would then have to guess the other half of.
@@ -79,6 +101,18 @@ const LISTINGS_URL_STATE = {
 function toTravelTimeQuery(value) {
   const parsed = parseCommuteFilter(value);
   return parsed == null ? null : { travelTimeMode: parsed.mode, travelTimeMaxMinutes: parsed.maxMinutes };
+}
+
+/**
+ * A multi-select filter's value (job, aiVerdict, icVerdict) lives in state as an array, but the
+ * API query string is one flat parameter per filter - so it travels as the same comma-separated
+ * form the URL already uses, and the server splits it back apart.
+ *
+ * @param {string[]|null} value
+ * @returns {string|null}
+ */
+function toCommaParam(value) {
+  return Array.isArray(value) && value.length > 0 ? value.join(',') : null;
 }
 
 const ListingsOverview = () => {
@@ -115,6 +149,8 @@ const ListingsOverview = () => {
     active: activityFilter,
     provider: providerFilter,
     status: statusFilter,
+    aiVerdict: aiVerdictFilter,
+    icVerdict: icVerdictFilter,
     afford: affordabilityFilter,
     commute: commuteFilter,
     hidden: hiddenOnly,
@@ -125,6 +161,9 @@ const ListingsOverview = () => {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [listingToDelete, setListingToDelete] = useState(null);
   const [newAvailableCount, setNewAvailableCount] = useState(0);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [ratingInFlight, setRatingInFlight] = useState(false);
+  const [ratingModel, setRatingModel] = useState(DEFAULT_RATING_MODEL);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const isHiddenView = hiddenOnly === true;
@@ -163,10 +202,12 @@ const ListingsOverview = () => {
       freeTextFilter,
       filter: {
         watchListFilter,
-        jobNameFilter,
+        jobNameFilter: toCommaParam(jobNameFilter),
         activityFilter: isHiddenView ? null : activityFilter,
         providerFilter,
         statusFilter,
+        aiVerdictFilter: toCommaParam(aiVerdictFilter),
+        icVerdictFilter: toCommaParam(icVerdictFilter),
         // The server turns this into a price range from the saved profile; it ignores the
         // filter entirely when there is no profile to derive one from.
         affordabilityFilter,
@@ -181,6 +222,9 @@ const ListingsOverview = () => {
   useEffect(() => {
     loadData();
     setNewAvailableCount(0);
+    // A page/filter change can bring an entirely different set of listings into view, so a
+    // selection made on the previous page no longer means what the user thinks it means.
+    setSelectedIds(new Set());
   }, [
     page,
     sortField,
@@ -191,6 +235,8 @@ const ListingsOverview = () => {
     jobNameFilter,
     watchListFilter,
     statusFilter,
+    aiVerdictFilter,
+    icVerdictFilter,
     affordabilityFilter,
     commuteFilter,
     hiddenOnly,
@@ -303,6 +349,37 @@ const ListingsOverview = () => {
     actions.userSettings.setListingsViewMode(mode).catch((error) => {
       Toast.error(errorMessage(error, t('common.settingSaveError')));
     });
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleRateSelected = async () => {
+    const listingIds = Array.from(selectedIds);
+    if (listingIds.length === 0) return;
+    setRatingInFlight(true);
+    try {
+      await xhrPost('/api/listings/rate', { listingIds, model: ratingModel });
+      Toast.success(t('listings.toastRatingStarted', { count: listingIds.length }));
+      setSelectedIds(new Set());
+    } catch (error) {
+      if (error?.status === 429) {
+        Toast.warning(t('listings.toastRatingBusy'));
+      } else {
+        Toast.error(errorMessage(error, t('listings.toastRatingError')));
+      }
+    } finally {
+      setRatingInFlight(false);
+    }
   };
 
   const confirmDeletion = async (hardDelete, remember, id = listingToDelete) => {
@@ -426,6 +503,7 @@ const ListingsOverview = () => {
         onChange={setValues}
         jobs={jobs}
         providers={providers}
+        availableProviders={listingsData?.availableProviders}
         financeComplete={financeComplete}
         affordabilityHelp={affordabilityHelp}
         hasAddresses={hasAddresses}
@@ -452,6 +530,41 @@ const ListingsOverview = () => {
               >
                 {t('listings.reloadButton')}
               </Button>
+            </div>
+          }
+          style={{ marginBottom: 12 }}
+        />
+      )}
+
+      {selectedIds.size > 0 && (
+        <Banner
+          type="info"
+          fullMode={false}
+          closeIcon={null}
+          description={
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <span>{t('listings.selectionBannerCount', { count: selectedIds.size })}</span>
+              <div style={{ display: 'flex', gap: 8, marginLeft: 16 }}>
+                <Select
+                  size="small"
+                  value={ratingModel}
+                  onChange={(val) => setRatingModel(val)}
+                  disabled={ratingInFlight}
+                  style={{ minWidth: 130 }}
+                >
+                  {RATING_MODELS.map((model) => (
+                    <Select.Option key={model.value} value={model.value}>
+                      {model.label}
+                    </Select.Option>
+                  ))}
+                </Select>
+                <Button size="small" onClick={() => setSelectedIds(new Set())} disabled={ratingInFlight}>
+                  {t('listings.selectionBannerClear')}
+                </Button>
+                <Button size="small" theme="solid" type="primary" loading={ratingInFlight} onClick={handleRateSelected}>
+                  {t('listings.selectionBannerRate')}
+                </Button>
+              </div>
             </div>
           }
           style={{ marginBottom: 12 }}
@@ -485,6 +598,8 @@ const ListingsOverview = () => {
           onRestore={handleRestore}
           isHiddenView={isHiddenView}
           onStatusChange={handleStatusChange}
+          selectedIds={selectedIds}
+          onToggleSelect={toggleSelect}
         />
       ) : (
         <ListingsTable
@@ -495,6 +610,8 @@ const ListingsOverview = () => {
           onRestore={handleRestore}
           isHiddenView={isHiddenView}
           onStatusChange={handleStatusChange}
+          selectedIds={selectedIds}
+          onToggleSelect={toggleSelect}
         />
       )}
 

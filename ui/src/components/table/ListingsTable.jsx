@@ -3,7 +3,7 @@
  * Licensed under Apache-2.0 with Commons Clause and Attribution/Naming Clause
  */
 
-import { Button, Tooltip } from '@douyinfe/semi-ui-19';
+import { Button, Checkbox, Tooltip } from '@douyinfe/semi-ui-19';
 import { IconBriefcase, IconDelete, IconMapPin, IconStar, IconStarStroked, IconEyeOpened } from '@douyinfe/semi-icons';
 import no_image from '../../assets/no_image.png';
 import { formatEuroPrice } from '../../services/price/priceService.js';
@@ -11,6 +11,9 @@ import * as timeService from '../../services/time/timeService.js';
 import StatusControl from '../listings/StatusControl.jsx';
 import ExternalListingLink from '../listings/ExternalListingLink.jsx';
 import AffordabilityChip from '../listings/AffordabilityChip.jsx';
+import AiVerdictBadge from '../listings/AiVerdictBadge.jsx';
+import ImmocockpitVerdictBadge from '../listings/ImmocockpitVerdictBadge.jsx';
+import PriceFactorBadge from '../listings/PriceFactorBadge.jsx';
 import PriceChangeBadge from '../listings/PriceChangeBadge.jsx';
 import CommuteBadge from '../transit/CommuteBadge.jsx';
 
@@ -18,7 +21,7 @@ import './ListingsTable.less';
 import { useTranslation, useLocale } from '../../services/i18n/i18n.jsx';
 
 /**
- * @param {{ listings: object[], onWatch: Function, onNavigate: Function, onDelete: Function, onRestore?: Function, isHiddenView?: boolean, onStatusChange: Function }} props
+ * @param {{ listings: object[], onWatch: Function, onNavigate: Function, onDelete: Function, onRestore?: Function, isHiddenView?: boolean, onStatusChange: Function, selectedIds?: Set<string>, onToggleSelect?: Function }} props
  */
 const ListingsTable = ({
   listings,
@@ -28,6 +31,8 @@ const ListingsTable = ({
   onRestore,
   isHiddenView = false,
   onStatusChange,
+  selectedIds,
+  onToggleSelect,
 }) => {
   const t = useTranslation();
   const locale = useLocale();
@@ -44,6 +49,20 @@ const ListingsTable = ({
             if (e.key === 'Enter' || e.key === ' ') onNavigate(item.id);
           }}
         >
+          {onToggleSelect && (
+            <div
+              className="listingsTable__row__select"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+            >
+              <Checkbox
+                checked={selectedIds?.has(item.id) ?? false}
+                onChange={() => onToggleSelect(item.id)}
+                aria-label={t('listings.selectForRating')}
+              />
+            </div>
+          )}
+
           <div className="listingsTable__row__thumb">
             <img
               src={item.image_url || no_image}
@@ -61,13 +80,18 @@ const ListingsTable = ({
           <div className="listingsTable__row__price">
             {item.price ? (
               <>
-                {formatEuroPrice(item.price, locale)}
-                <AffordabilityChip verdict={item.affordabilityVerdict} dealType={item.dealType} />
-                <PriceChangeBadge
-                  price={item.price}
-                  previousPrice={item.previous_price}
-                  changedAt={item.price_changed_at}
-                />
+                <div className="listingsTable__row__price__main">
+                  {formatEuroPrice(item.price, locale)}
+                  <AffordabilityChip verdict={item.affordabilityVerdict} dealType={item.dealType} />
+                  <PriceChangeBadge
+                    price={item.price}
+                    previousPrice={item.previous_price}
+                    changedAt={item.price_changed_at}
+                  />
+                </div>
+                <AiVerdictBadge verdict={item.ai_verdict} />
+                <ImmocockpitVerdictBadge verdict={item.immocockpitVerdict} analysis={item.immocockpitAnalysis} />
+                <PriceFactorBadge analysis={item.immocockpitAnalysis} />
               </>
             ) : (
               <span className="listingsTable__row__empty">---</span>

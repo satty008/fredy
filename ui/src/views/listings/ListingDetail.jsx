@@ -53,6 +53,8 @@ import ListingDeletionModal from '../../components/ListingDeletionModal.jsx';
 import Headline from '../../components/headline/Headline.jsx';
 import IconEuro from '../../components/icons/IconEuro.jsx';
 import StatusControl from '../../components/listings/StatusControl.jsx';
+import ImmocockpitVerdictBadge from '../../components/listings/ImmocockpitVerdictBadge.jsx';
+import PriceFactorBadge from '../../components/listings/PriceFactorBadge.jsx';
 import ListingFinanceCard from './components/ListingFinanceCard.jsx';
 import PriceHistoryChart from './components/PriceHistoryChart.jsx';
 import NearbyStops from '../../components/transit/NearbyStops.jsx';
@@ -81,6 +83,49 @@ function hasRouteFor(travelTimes, mode) {
   );
 }
 
+/**
+ * Models the AI rater is allowed to run with. Kept in sync by hand with the allowlists in
+ * lib/api/routes/listingsRouter.js and the fredy-rater webhook.js, which live outside this repo.
+ * @type {{ value: string, label: string }[]}
+ */
+const RATING_MODELS = [
+  { value: 'claude-sonnet-5', label: 'Sonnet 5' },
+  { value: 'claude-opus-5', label: 'Opus 5' },
+  { value: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5' },
+];
+const DEFAULT_RATING_MODEL = 'claude-sonnet-5';
+
+/**
+ * Base URL of the immocockpit deep-link target. Kept in sync by hand with that app's own
+ * repo/deployment (satty008/immocockpit) - a separate host with no shared build, same as the
+ * RATING_MODELS allowlist above.
+ */
+const IMMOCOCKPIT_BASE_URL = 'https://immocockpit.bhavibhavan.duckdns.org/';
+
+/**
+ * Builds the deep-link that hands a listing off to immocockpit for a full rental-investment
+ * analysis (yield, tax, depreciation, 30-year projection) - the one axis Fredy's own finance
+ * module deliberately doesn't model, since it only ever measures affordability against the
+ * buyer's own household income, never against rental income the property itself would produce.
+ *
+ * `listing.currentRent` does not exist yet (fredy-rater's LLM extraction of a stated in-place
+ * tenancy rent is a separate, not-yet-shipped change) - reading it here is forward-compatible:
+ * `actualRent` just stays omitted until that field starts arriving.
+ *
+ * @param {Object} listing
+ * @returns {string}
+ */
+function buildImmocockpitUrl(listing) {
+  const params = new URLSearchParams({ src: 'fredy', listingId: String(listing.id) });
+  if (listing.address) params.set('address', listing.address);
+  if (Number.isFinite(listing.price)) params.set('price', String(listing.price));
+  if (Number.isFinite(listing.size)) params.set('area', String(listing.size));
+  if (listing.bundeslandCode) params.set('state', listing.bundeslandCode);
+  if (Number.isFinite(listing.targetRent)) params.set('targetRent', String(Math.round(listing.targetRent)));
+  if (Number.isFinite(listing.currentRent)) params.set('actualRent', String(Math.round(listing.currentRent)));
+  return `${IMMOCOCKPIT_BASE_URL}?${params.toString()}`;
+}
+
 export default function ListingDetail() {
   const t = useTranslation();
   const locale = useLocale();
@@ -99,6 +144,8 @@ export default function ListingDetail() {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [notesDraft, setNotesDraft] = useState('');
   const [notesSaving, setNotesSaving] = useState(false);
+  const [ratingInFlight, setRatingInFlight] = useState(false);
+  const [ratingModel, setRatingModel] = useState(DEFAULT_RATING_MODEL);
   const [priceHistory, setPriceHistory] = useState([]);
   // Set while the user is placing the listing by hand: carries the address text they typed, waiting
   // for the coordinates the map is about to give it.
@@ -307,6 +354,23 @@ export default function ListingDetail() {
     }
   };
 
+  const handleRateWithAI = async () => {
+    if (!listing) return;
+    setRatingInFlight(true);
+    try {
+      await xhrPost('/api/listings/rate', { listingIds: [listing.id], model: ratingModel });
+      Toast.success(t('listing.detail.toastRatingStarted'));
+    } catch (e) {
+      if (e?.status === 429) {
+        Toast.warning(t('listings.toastRatingBusy'));
+      } else {
+        Toast.error(e?.json?.message || t('listings.toastRatingError'));
+      }
+    } finally {
+      setRatingInFlight(false);
+    }
+  };
+
   const handleSaveNotes = async () => {
     if (!listing) return;
     setNotesSaving(true);
@@ -486,7 +550,7 @@ export default function ListingDetail() {
         `listings.${isRental ? 'rentAffordabilityTooltip' : 'affordabilityTooltip'}.${affordabilityVerdict}`,
         {
           price: formatEuro(
-            isRental ? financeThresholds.rent.affordableMaxRent : financeThresholds.buy.affordableMaxPrice,
+            isRental ? financeThresholds.rent?.affordableMaxRent : financeThresholds.buy?.affordableMaxPrice,
             locale,
           ),
         },
@@ -579,9 +643,23 @@ export default function ListingDetail() {
             </div>
 
             <div className="listing-detail__notes">
-              <Title heading={4} className="listing-detail__notes-title">
-                {t('listing.detail.notesTitle')}
-              </Title>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Title heading={4} className="listing-detail__notes-title">
+                  {t('listing.detail.notesTitle')}
+                </Title>
+                <Space>
+                  {listing.ai_verdict && (
+                    <Tag
+                      color={listing.ai_verdict === 'good' ? 'green' : listing.ai_verdict === 'maybe' ? 'amber' : 'red'}
+                      shape="circle"
+                    >
+                      {t(`listings.filterAiVerdict${listing.ai_verdict[0].toUpperCase()}${listing.ai_verdict.slice(1)}`)}
+                    </Tag>
+                  )}
+                  <ImmocockpitVerdictBadge verdict={listing.immocockpitVerdict} analysis={listing.immocockpitAnalysis} />
+                  <PriceFactorBadge analysis={listing.immocockpitAnalysis} />
+                </Space>
+              </div>
               <TextArea
                 value={notesDraft}
                 onChange={(val) => setNotesDraft(val)}
@@ -600,6 +678,22 @@ export default function ListingDetail() {
                   onClick={handleSaveNotes}
                 >
                   {t('listing.detail.storeNotes')}
+                </Button>
+                <Select
+                  size="small"
+                  value={ratingModel}
+                  onChange={(val) => setRatingModel(val)}
+                  disabled={ratingInFlight}
+                  style={{ minWidth: 130 }}
+                >
+                  {RATING_MODELS.map((model) => (
+                    <Select.Option key={model.value} value={model.value}>
+                      {model.label}
+                    </Select.Option>
+                  ))}
+                </Select>
+                <Button loading={ratingInFlight} disabled={ratingInFlight} onClick={handleRateWithAI}>
+                  {t('listing.detail.rateWithAi')}
                 </Button>
               </Space>
             </div>
@@ -704,6 +798,30 @@ export default function ListingDetail() {
                   </Descriptions.Item>
                 ))}
               </Descriptions>
+
+              {/* Answers "is it a good deal?" - a question Fredy's own finance module
+                  deliberately doesn't model, since it never nets rental income against the
+                  mortgage. Placed right after the details, ahead of the (potentially tall,
+                  chart-bearing) affordability card below, so it's visible without scrolling.
+                  Always available for a priced purchase listing, independent of whether the
+                  household profile is set up. */}
+              {!isRental && listing.price != null && (
+                <>
+                  <Divider margin="1.5rem" />
+                  <Space align="center" wrap>
+                    <IconEuro style={{ fontSize: '18px', color: 'var(--semi-color-primary)' }} />
+                    <Text type="secondary">{t('listing.detail.analyzeHint')}</Text>
+                    <Button
+                      theme="borderless"
+                      size="small"
+                      icon={<IconLink />}
+                      onClick={() => window.open(buildImmocockpitUrl(listing), '_blank', 'noopener,noreferrer')}
+                    >
+                      {t('listing.detail.analyzeButton')}
+                    </Button>
+                  </Space>
+                </>
+              )}
 
               {/* Directly under the figures it explains. The chart hides itself below two
                   readings, so a listing whose price has never moved shows nothing at all rather

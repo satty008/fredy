@@ -32,6 +32,8 @@ export const NEUTRAL = {
   active: null,
   provider: null,
   status: null,
+  aiVerdict: null,
+  icVerdict: null,
   afford: null,
   commute: null,
   hidden: false,
@@ -47,7 +49,34 @@ export const NEUTRAL = {
  *
  * @type {string[]}
  */
-export const FILTER_KEYS = ['hidden', 'active', 'watch', 'status', 'afford', 'commute', 'provider', 'job'];
+export const FILTER_KEYS = [
+  'hidden',
+  'active',
+  'watch',
+  'status',
+  'aiVerdict',
+  'icVerdict',
+  'afford',
+  'commute',
+  'provider',
+  'job',
+];
+
+/**
+ * Normalizes a filter value that may be a single id/verdict or an array of them (aiVerdict,
+ * icVerdict and job are multi-select; every other filter here stays single-valued) into a plain
+ * array, so the two call sites below that need to iterate don't each have to know which shape a
+ * given filter happens to be.
+ *
+ * @param {*} value
+ * @returns {Array}
+ */
+function toList(value) {
+  if (value == null) {
+    return [];
+  }
+  return Array.isArray(value) ? value : [value];
+}
 
 /**
  * Whether a filter is doing something.
@@ -62,7 +91,13 @@ export function isActiveFilter(key, values) {
   if (key === 'active' && values.hidden === true) {
     return false;
   }
-  return values[key] !== NEUTRAL[key];
+  const value = values[key];
+  // A multi-select filter (aiVerdict, icVerdict, job) is "on" once it holds at least one value;
+  // an empty array reads the same as the neutral `null` it started from.
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+  return value !== NEUTRAL[key];
 }
 
 /**
@@ -151,6 +186,26 @@ export function describeActiveFilters(values, { t, jobs = [], providers = [] }) 
         accepted: t('listings.filterStatusAccepted'),
         none: t('listings.filterStatusNone'),
       })[values.status] ?? values.status,
+    aiVerdict: () => {
+      const label = (v) =>
+        ({
+          good: t('listings.filterAiVerdictGood'),
+          maybe: t('listings.filterAiVerdictMaybe'),
+          bad: t('listings.filterAiVerdictBad'),
+          none: t('listings.filterAiVerdictUnrated'),
+        })[v] ?? v;
+      return toList(values.aiVerdict).map(label).join(', ');
+    },
+    icVerdict: () => {
+      const label = (v) =>
+        ({
+          good: t('listings.filterImmocockpitVerdictGood'),
+          maybe: t('listings.filterImmocockpitVerdictMaybe'),
+          bad: t('listings.filterImmocockpitVerdictBad'),
+          none: t('listings.filterIcVerdictUnavailable'),
+        })[v] ?? v;
+      return toList(values.icVerdict).map(label).join(', ');
+    },
     afford: () =>
       ({
         affordable: t('listings.filterAffordabilityYes'),
@@ -167,11 +222,85 @@ export function describeActiveFilters(values, { t, jobs = [], providers = [] }) 
           });
     },
     provider: () => named(providers, values.provider),
-    job: () => named(jobs, values.job),
+    job: () =>
+      toList(values.job)
+        .map((id) => named(jobs, id))
+        .join(', '),
   };
 
   return FILTER_KEYS.filter((key) => isActiveFilter(key, values)).map((key) => ({
     key,
     label: labels[key](),
   }));
+}
+/**
+ * Restricts the available providers to those for which results exist (or are configured
+ * in the user's jobs), so the filter dropdown only contains relevant providers.
+ *
+ * If `availableProviders` (from listing search results) is provided and non-empty,
+ * it narrows to providers present in those results. Otherwise, it falls back to
+ * providers configured across the user's jobs (or the selected job).
+ *
+ * When no jobs are configured yet or no providers can be derived, all providers are
+ * preserved as a fallback. A currently active provider filter is always preserved.
+ *
+ * @param {{id: string, name: string}[]} [providers]
+ * @param {Array<{id: string, name?: string, provider?: Array<{id?: string, name?: string}>}>} [jobs]
+ * @param {string|string[]|null} [selectedJobId] One job id, or several now that the job filter is
+ *   multi-select.
+ * @param {string|null} [currentProviderId]
+ * @param {string[]|null} [availableProviders] Distinct provider IDs that have results
+ * @returns {{id: string, name: string}[]}
+ */
+export function filterConfiguredProviders(
+  providers = [],
+  jobs = [],
+  selectedJobId = null,
+  currentProviderId = null,
+  availableProviders = null,
+) {
+  if (!Array.isArray(providers) || providers.length === 0) {
+    return [];
+  }
+
+  // 1. If concrete result providers from listings exist, prioritize them
+  if (Array.isArray(availableProviders) && availableProviders.length > 0) {
+    const resultProviderIds = new Set(availableProviders);
+    return providers.filter(
+      (provider) => resultProviderIds.has(provider.id) || (currentProviderId && provider.id === currentProviderId),
+    );
+  }
+
+  // 2. Otherwise fall back to job configurations
+  if (!Array.isArray(jobs) || jobs.length === 0) {
+    return providers;
+  }
+
+  const selectedJobIds = toList(selectedJobId);
+  const relevantJobs =
+    selectedJobIds.length > 0
+      ? jobs.filter((j) => selectedJobIds.includes(j?.id) || selectedJobIds.includes(j?.name))
+      : jobs;
+
+  const targetJobs = relevantJobs.length > 0 ? relevantJobs : jobs;
+
+  const configuredProviderIds = new Set();
+  for (const job of targetJobs) {
+    if (Array.isArray(job?.provider)) {
+      for (const p of job.provider) {
+        const id = p?.id || p?.name;
+        if (id) {
+          configuredProviderIds.add(id);
+        }
+      }
+    }
+  }
+
+  if (configuredProviderIds.size === 0) {
+    return providers;
+  }
+
+  return providers.filter(
+    (provider) => configuredProviderIds.has(provider.id) || (currentProviderId && provider.id === currentProviderId),
+  );
 }

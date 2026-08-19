@@ -55,6 +55,25 @@
     }
   }
 
+  &__select {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 1;
+    background: rgba(0,0,0,0.5);
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .semi-checkbox {
+      margin: 0;
+      padding: 0;
+    }
+  }
+
   &__star {
     position: absolute;
     top: 8px;
@@ -103,8 +122,15 @@
     font-weight: 600;
     color: @color-success;
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-start;
     gap: 4px;
+
+    &__main {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
   }
 
   &__meta {
