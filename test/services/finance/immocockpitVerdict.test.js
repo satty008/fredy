@@ -46,6 +46,9 @@ describe('immocockpitVerdictFor', () => {
     expect(result.dscr).toBeCloseTo(0.836, 2);
     // The 12 EUR/m2 fixture value from beforeEach, round-tripped through coldRent/size.
     expect(result.coldRentPerSqm).toBeCloseTo(12, 5);
+    // 200000 / (720 * 12) = 23.15 - between the 20/25 green/yellow tier boundaries.
+    expect(result.priceFactor).toBeCloseTo(23.15, 2);
+    expect(result.priceFactorTier).toBe('maybe');
   });
 
   it('returns null for a rental job - immocockpit only models a purchase', () => {
@@ -73,5 +76,16 @@ describe('immocockpitVerdictFor', () => {
     // A cheap, high-rent listing: yield and cashflow both clear the green thresholds easily.
     const result = immocockpitVerdictFor({ price: 60000, size: 60, address: '48143 Münster', dealType: 'buy' });
     expect(result.verdict).toBe('good');
+    // 60000 / (720 * 12) = 6.94 - well under the 20 green boundary.
+    expect(result.priceFactor).toBeCloseTo(6.94, 2);
+    expect(result.priceFactorTier).toBe('good');
+  });
+
+  it('tiers the price factor independently of the overall verdict', () => {
+    // A price high enough to push the factor past 25 (bad tier) while everything else about the
+    // listing is unremarkable, confirming the tier reflects price/rent alone, not the 4-metric score.
+    const result = immocockpitVerdictFor({ price: 350000, size: 60, address: '48143 Münster', dealType: 'buy' });
+    expect(result.priceFactor).toBeGreaterThan(25);
+    expect(result.priceFactorTier).toBe('bad');
   });
 });

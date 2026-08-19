@@ -6,6 +6,7 @@
 import { Button, Select, Tag, TextArea } from '@douyinfe/semi-ui-19';
 
 import ImmocockpitVerdictBadge from '../../../components/listings/ImmocockpitVerdictBadge.jsx';
+import PriceFactorBadge from '../../../components/listings/PriceFactorBadge.jsx';
 import AttachmentsCard from './AttachmentsCard.jsx';
 import { useTranslation } from '../../../services/i18n/i18n.jsx';
 import './ListingWorkspace.less';
@@ -66,11 +67,17 @@ export default function ListingWorkspace({
       <div className="listing-workspace__columns">
         <div className="listing-workspace__notes">
           <h3 className="listing-workspace__subtitle">{t('listing.detail.notesTitle')}</h3>
-          {aiVerdict && (
-            <Tag color={aiVerdict === 'good' ? 'green' : aiVerdict === 'maybe' ? 'amber' : 'red'} shape="circle">
-              {t(`listings.filterAiVerdict${aiVerdict[0].toUpperCase()}${aiVerdict.slice(1)}`)}
-            </Tag>
-          )}
+          {/* The three verdicts about this listing - the AI's reading of the text and photos, and the
+              two number-only screens from immocockpit - side by side so they can be compared. */}
+          <div className="listing-workspace__verdicts" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {aiVerdict && (
+              <Tag color={aiVerdict === 'good' ? 'green' : aiVerdict === 'maybe' ? 'amber' : 'red'} shape="circle">
+                {t(`listings.filterAiVerdict${aiVerdict[0].toUpperCase()}${aiVerdict.slice(1)}`)}
+              </Tag>
+            )}
+            <ImmocockpitVerdictBadge verdict={immocockpitVerdict} analysis={immocockpitAnalysis} />
+            <PriceFactorBadge analysis={immocockpitAnalysis} />
+          </div>
           <TextArea
             value={notesDraft}
             onChange={onNotesChange}
