@@ -574,7 +574,12 @@ export default function ListingDetail() {
       <Headline
         text={listing?.title || t('listing.detail.defaultTitle')}
         actions={
-          <Button icon={<IconArrowLeft />} onClick={() => navigate(-1)} theme="borderless" style={{ color: '#909090' }}>
+          <Button
+            icon={<IconArrowLeft />}
+            onClick={() => navigate(-1)}
+            theme="borderless"
+            style={{ color: 'var(--f-muted)' }}
+          >
             {t('listing.detail.back')}
           </Button>
         }
@@ -653,10 +658,15 @@ export default function ListingDetail() {
                       color={listing.ai_verdict === 'good' ? 'green' : listing.ai_verdict === 'maybe' ? 'amber' : 'red'}
                       shape="circle"
                     >
-                      {t(`listings.filterAiVerdict${listing.ai_verdict[0].toUpperCase()}${listing.ai_verdict.slice(1)}`)}
+                      {t(
+                        `listings.filterAiVerdict${listing.ai_verdict[0].toUpperCase()}${listing.ai_verdict.slice(1)}`,
+                      )}
                     </Tag>
                   )}
-                  <ImmocockpitVerdictBadge verdict={listing.immocockpitVerdict} analysis={listing.immocockpitAnalysis} />
+                  <ImmocockpitVerdictBadge
+                    verdict={listing.immocockpitVerdict}
+                    analysis={listing.immocockpitAnalysis}
+                  />
                   <PriceFactorBadge analysis={listing.immocockpitAnalysis} />
                 </Space>
               </div>

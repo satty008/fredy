@@ -8,3 +8,5 @@ npm-debug.log
 .vscode
 tools/release/config.json
 .agents.env
+.agents
+graft/
