@@ -1,6 +1,6 @@
 {
   "name": "fredy",
-  "version": "26.5.0",
+  "version": "26.5.1",
   "description": "Fredy - [F]ind [R]eal [E]state [D]amn Eas[y] - Fredy keeps searching for new apartments, houses, and flats in Germany on platforms like ImmoScout24, Immowelt, Immonet, eBay Kleinanzeigen, and WG-Gesucht and instantly delivers the results to you via Slack, Telegram, Email, Discord or ntfy, so you can focus on the more important things in life ;)",
   "scripts": {
     "prepare": "husky",
@@ -84,7 +84,7 @@
     "cloakbrowser": "^0.5.7",
     "fastify": "^5.12.0",
     "handlebars": "4.7.9",
-    "maplibre-gl": "6.4.0",
+    "maplibre-gl": "6.4.1",
     "nanoid": "6.0.1",
     "node-cron": "^4.6.0",
     "node-fetch": "3.3.2",
@@ -124,6 +124,6 @@
     "lint-staged": "17.3.0",
     "nodemon": "^3.1.14",
     "prettier": "3.9.6",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   }
 }

@@ -479,6 +479,7 @@ const ListingsOverview = () => {
         onChange={setValues}
         jobs={jobs}
         providers={providers}
+        availableProviders={listingsData?.availableProviders}
         financeComplete={financeComplete}
         affordabilityHelp={affordabilityHelp}
         hasAddresses={hasAddresses}
