@@ -1,5 +1,5 @@
 {
-  "_comment": "Per-city reference data from immocation's Standort Tool (https://standort.immocation.de/suche), pulled 2026-08-18 via its search-page API (POST st-backend-1075988353670.europe-west3.run.app/api/search-page, name-contains filter) for every city in rent-data.json's reference table - the tool has no bulk export, so this was a scripted per-city lookup, not a UI export. kaufpreisPerSqm/kaltmietePerSqm are EUR/m2 (existing-flat purchase price / cold rent, most recent monthly figure at pull time); bruttomietrenditePercent is immocation's own gross-yield calc. prognosRang* are Prognos Zukunftsatlas 2025 ranks out of 400 German Kreise/kreisfreie Staedte (Gesamt/Staerke/Dynamik = overall/current-strength/future-trend), lower is better (1 = best). A few name collisions needed manual disambiguation against rent-data.json's own city list: 'Halle' alone matched a small Niedersachsen village first, resolved by re-querying 'Halle (Saale)' for the Sachsen-Anhalt city; 'Essingen' and 'Leonberg' each had a same-named village in a different Bundesland, resolved to the Baden-Württemberg entry matching this file's other BW cities; 'Schoemberg' has the same Landkreis Calw vs. Zollernalbkreis ambiguity rent-data.json already flags in its own comment - resolved to the Landkreis Calw one (zipcode 75328) for the same reason. Not re-verified against a second source; re-check periodically the same way rent-data.json says to.",
+  "_comment": "Per-city reference data from immocation's Standort Tool (https://standort.immocation.de/suche), pulled 2026-08-18 via its search-page API (POST st-backend-1075988353670.europe-west3.run.app/api/search-page, name-contains filter) for every city in rent-data.json's reference table - the tool has no bulk export, so this was a scripted per-city lookup, not a UI export. kaufpreisPerSqm/kaltmietePerSqm are EUR/m2 (existing-flat purchase price / cold rent, most recent monthly figure at pull time); bruttomietrenditePercent is immocation's own gross-yield calc. prognosRang* are Prognos Zukunftsatlas 2025 ranks out of 400 German Kreise/kreisfreie Staedte (Gesamt/Staerke/Dynamik = overall/current-strength/future-trend), lower is better (1 = best). A few name collisions needed manual disambiguation against rent-data.json's own city list: 'Halle' alone matched a small Niedersachsen village first, resolved by re-querying 'Halle (Saale)' for the Sachsen-Anhalt city; 'Essingen' and 'Leonberg' each had a same-named village in a different Bundesland, resolved to the Baden-Württemberg entry matching this file's other BW cities; 'Schoemberg' has the same Landkreis Calw vs. Zollernalbkreis ambiguity rent-data.json already flags in its own comment - resolved to the Landkreis Calw one (zipcode 75328) for the same reason. Not re-verified against a second source; re-check periodically the same way rent-data.json says to. 2026-08-19 follow-up: kaltmietePerSqm for the Ludwigsburg/Vaihingen-Enz cluster (ludwigsburg, asperg, bietigheim-bissingen, ditzingen, freiberg am neckar, vaihingen an der enz, leonberg, sachsenheim, eppingen, lauffen am neckar) overwritten with rent-data.json's Mietspiegel-anchored values, replacing the original immocation-API asking-rent figures - the two files were badly out of sync for this cluster (immocation showing ~13-15.5 vs rent-data.json's corrected ~10-11.3), and this field is shown to the AI rater as area context alongside the yield-driving figure, so a contradiction there would be actively confusing rather than just imprecise. kaufpreisPerSqm/bruttomietrenditePercent/prognosRang* for these cities are unchanged - only kaltmietePerSqm was touched.",
   "cities": {
     "münster": {
       "kaufpreisPerSqm": 4881,
@@ -291,7 +291,7 @@
     },
     "vaihingen an der enz": {
       "kaufpreisPerSqm": 3708,
-      "kaltmietePerSqm": 12.9,
+      "kaltmietePerSqm": 10.2,
       "bruttomietrenditePercent": 4.174,
       "prognosRangGesamt": 16,
       "prognosRangStaerke": 9,
@@ -299,7 +299,7 @@
     },
     "ludwigsburg": {
       "kaufpreisPerSqm": 4352,
-      "kaltmietePerSqm": 15.39,
+      "kaltmietePerSqm": 10.66,
       "bruttomietrenditePercent": 4.243,
       "prognosRangGesamt": 16,
       "prognosRangStaerke": 9,
@@ -307,7 +307,7 @@
     },
     "leonberg": {
       "kaufpreisPerSqm": 3991,
-      "kaltmietePerSqm": 15.24,
+      "kaltmietePerSqm": 11.3,
       "bruttomietrenditePercent": 4.581,
       "prognosRangGesamt": 5,
       "prognosRangStaerke": 4,
@@ -315,7 +315,7 @@
     },
     "ditzingen": {
       "kaufpreisPerSqm": 3810,
-      "kaltmietePerSqm": 14.9,
+      "kaltmietePerSqm": 10.08,
       "bruttomietrenditePercent": 4.692,
       "prognosRangGesamt": 16,
       "prognosRangStaerke": 9,
@@ -323,7 +323,7 @@
     },
     "sachsenheim": {
       "kaufpreisPerSqm": 3577,
-      "kaltmietePerSqm": 13.39,
+      "kaltmietePerSqm": 9.8,
       "bruttomietrenditePercent": 4.491,
       "prognosRangGesamt": 16,
       "prognosRangStaerke": 9,
@@ -331,7 +331,7 @@
     },
     "bietigheim-bissingen": {
       "kaufpreisPerSqm": 4124,
-      "kaltmietePerSqm": 14.25,
+      "kaltmietePerSqm": 10.04,
       "bruttomietrenditePercent": 4.146,
       "prognosRangGesamt": 16,
       "prognosRangStaerke": 9,
@@ -339,7 +339,7 @@
     },
     "freiberg am neckar": {
       "kaufpreisPerSqm": 3977,
-      "kaltmietePerSqm": 14.57,
+      "kaltmietePerSqm": 9.94,
       "bruttomietrenditePercent": 4.397,
       "prognosRangGesamt": 16,
       "prognosRangStaerke": 9,
@@ -347,7 +347,7 @@
     },
     "eppingen": {
       "kaufpreisPerSqm": 3155,
-      "kaltmietePerSqm": 11.02,
+      "kaltmietePerSqm": 10.5,
       "bruttomietrenditePercent": 4.191,
       "prognosRangGesamt": 12,
       "prognosRangStaerke": 10,
@@ -355,7 +355,7 @@
     },
     "lauffen am neckar": {
       "kaufpreisPerSqm": 3449,
-      "kaltmietePerSqm": 12.23,
+      "kaltmietePerSqm": 10.3,
       "bruttomietrenditePercent": 4.254,
       "prognosRangGesamt": 12,
       "prognosRangStaerke": 10,
@@ -363,7 +363,7 @@
     },
     "asperg": {
       "kaufpreisPerSqm": 4365,
-      "kaltmietePerSqm": 15.48,
+      "kaltmietePerSqm": 10.39,
       "bruttomietrenditePercent": 4.256,
       "prognosRangGesamt": 16,
       "prognosRangStaerke": 9,
