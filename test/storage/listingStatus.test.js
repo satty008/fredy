@@ -188,8 +188,10 @@ describe('listingsStorage.queryListings aiVerdictFilter', () => {
   it('filters by equality for a concrete verdict', () => {
     listingsStorage.queryListings({ aiVerdictFilter: 'maybe', userId: 'u1', isAdmin: true });
     const pageQuery = calls.query.find((c) => !/COUNT\(1\)/.test(c.sql));
-    expect(pageQuery.sql).toMatch(/\(l\.ai_verdict = @aiVerdictValue\)/);
-    expect(pageQuery.params.aiVerdictValue).toBe('maybe');
+    // A single verdict still goes through the same IN-clause builder the multi-select filter
+    // uses, so it lands in an IN of one rather than an `=`.
+    expect(pageQuery.sql).toMatch(/\(l\.ai_verdict IN \(@aiVerdictValue0\)\)/);
+    expect(pageQuery.params.aiVerdictValue0).toBe('maybe');
   });
 
   it('ignores unknown aiVerdictFilter values silently', () => {
@@ -274,8 +276,9 @@ describe('listingsStorage.getAvailableProviders', () => {
     sqliteMock.__queryHandler = () => [{ provider: 'immoscout' }];
     const result = listingsStorage.getAvailableProviders({ jobId: 'job-1', userId: 'u1', isAdmin: true });
     expect(result).toEqual(['immoscout']);
-    expect(calls.query[0].sql).toMatch(/\(l\.job_id = @jobId\)/);
-    expect(calls.query[0].params.jobId).toBe('job-1');
+    // Single job id, same IN-clause builder the multi-select job filter uses.
+    expect(calls.query[0].sql).toMatch(/\(l\.job_id IN \(@jobId0\)\)/);
+    expect(calls.query[0].params.jobId0).toBe('job-1');
   });
 });
 

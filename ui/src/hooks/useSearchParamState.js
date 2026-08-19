@@ -27,6 +27,20 @@ export const parseNullableBoolean = {
   stringify: (v) => (v === null ? 'all' : String(v)),
 };
 
+// For a multi-select filter: a comma-separated list in the URL, an array (or null when empty) in
+// state. `stringify` collapsing an empty array to `null` is what lets the default-value check in
+// `setValues` below drop the param instead of writing a trailing `key=`.
+export const parseStringArray = {
+  parse: (v) => {
+    const list = String(v)
+      .split(',')
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0);
+    return list.length > 0 ? list : null;
+  },
+  stringify: (v) => (Array.isArray(v) && v.length > 0 ? v.join(',') : null),
+};
+
 /**
  * Read and write a group of URL search params as one piece of state.
  *

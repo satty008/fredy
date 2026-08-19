@@ -75,9 +75,7 @@ const ListingsTable = ({
           }}
         >
           {onToggleSelect && (
-            <div
-              className="listingsTable__row__select"
-            >
+            <div className="listingsTable__row__select">
               <Checkbox
                 checked={selectedIds?.has(item.id) ?? false}
                 onChange={() => onToggleSelect(item.id)}

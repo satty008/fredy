@@ -123,9 +123,11 @@ export default function ListingsFilterPanel({
         <FilterSelect
           help={t('listings.filterAiVerdictHelp')}
           placeholder={t('listings.filterAiVerdictPlaceholder')}
+          multiple
+          maxTagCount={2}
           showClear
-          onChange={(val) => onChange({ aiVerdict: val ?? null, page: 1 })}
-          value={values.aiVerdict}
+          onChange={(vals) => onChange({ aiVerdict: vals?.length > 0 ? vals : null, page: 1 })}
+          value={values.aiVerdict ?? []}
           style={{ width: '100%' }}
         >
           <Select.Option value="good">{t('listings.filterAiVerdictGood')}</Select.Option>
@@ -137,9 +139,11 @@ export default function ListingsFilterPanel({
         <FilterSelect
           help={t('listings.filterIcVerdictHelp')}
           placeholder={t('listings.filterIcVerdictPlaceholder')}
+          multiple
+          maxTagCount={2}
           showClear
-          onChange={(val) => onChange({ icVerdict: val ?? null, page: 1 })}
-          value={values.icVerdict}
+          onChange={(vals) => onChange({ icVerdict: vals?.length > 0 ? vals : null, page: 1 })}
+          value={values.icVerdict ?? []}
           style={{ width: '100%' }}
         >
           <Select.Option value="good">{t('listings.filterImmocockpitVerdictGood')}</Select.Option>
@@ -309,9 +313,11 @@ export default function ListingsFilterPanel({
         <FilterSelect
           help={t('listings.filterJobHelp')}
           placeholder={t('listings.filterJobPlaceholder')}
+          multiple
+          maxTagCount={2}
           showClear
-          onChange={(val) => onChange({ job: val ?? null, page: 1 })}
-          value={values.job}
+          onChange={(vals) => onChange({ job: vals?.length > 0 ? vals : null, page: 1 })}
+          value={values.job ?? []}
           style={{ width: '100%' }}
         >
           {jobs?.map((job) => (

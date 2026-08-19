@@ -4,7 +4,13 @@
  */
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useUrlState, parseNumber, parseString, parseNullableBoolean } from '../../hooks/useSearchParamState.js';
+import {
+  useUrlState,
+  parseNumber,
+  parseString,
+  parseNullableBoolean,
+  parseStringArray,
+} from '../../hooks/useSearchParamState.js';
 import { Button, Pagination, Toast, Input, Select, Empty, Tooltip, Banner, Dropdown } from '@douyinfe/semi-ui-19';
 import { IconSearch, IconArrowUp, IconArrowDown, IconDelete } from '@douyinfe/semi-icons';
 import { IconMore } from '../icons/StrokeIcons.jsx';
@@ -69,12 +75,14 @@ const LISTINGS_URL_STATE = {
   dir: { defaultValue: 'desc', codec: parseString },
   q: { defaultValue: null, codec: parseString },
   watch: { defaultValue: null, codec: parseNullableBoolean },
-  job: { defaultValue: null, codec: parseString },
+  // Multi-select: several jobs/verdicts at once, comma-separated in the URL - see
+  // parseStringArray.
+  job: { defaultValue: null, codec: parseStringArray },
   active: { defaultValue: true, codec: parseNullableBoolean },
   provider: { defaultValue: null, codec: parseString },
   status: { defaultValue: null, codec: parseString },
-  aiVerdict: { defaultValue: null, codec: parseString },
-  icVerdict: { defaultValue: null, codec: parseString },
+  aiVerdict: { defaultValue: null, codec: parseStringArray },
+  icVerdict: { defaultValue: null, codec: parseStringArray },
   afford: { defaultValue: null, codec: parseString },
   // Mode and ceiling in one key, as `transit:30`. Two keys would let a bookmarked URL carry half a
   // filter, which the server would then have to guess the other half of.
@@ -337,7 +345,6 @@ const ListingsOverview = () => {
     }
   };
 
-
   const confirmDeletion = async (hardDelete, remember, id = listingToDelete) => {
     try {
       if (remember) {
@@ -561,13 +568,7 @@ const ListingsOverview = () => {
                 <Button size="small" onClick={() => setSelectedIds(new Set())} disabled={ratingInFlight}>
                   {t('listings.selectionBannerClear')}
                 </Button>
-                <Button
-                  size="small"
-                  theme="solid"
-                  type="primary"
-                  loading={ratingInFlight}
-                  onClick={handleRateSelected}
-                >
+                <Button size="small" theme="solid" type="primary" loading={ratingInFlight} onClick={handleRateSelected}>
                   {t('listings.selectionBannerRate')}
                 </Button>
               </div>
