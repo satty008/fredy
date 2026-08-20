@@ -198,9 +198,11 @@ export default function ListingsFilterPanel({
         <FilterSelect
           help={t('listings.filterProviderHelp')}
           placeholder={t('listings.filterProviderPlaceholder')}
+          multiple
+          maxTagCount={2}
           showClear
-          onChange={(val) => onChange({ provider: val ?? null, page: 1 })}
-          value={values.provider}
+          onChange={(vals) => onChange({ provider: vals?.length > 0 ? vals : null, page: 1 })}
+          value={values.provider ?? []}
           style={{ width: '100%' }}
         >
           {visibleProviders?.map((provider) => (

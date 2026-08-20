@@ -263,9 +263,19 @@ describe('listingFilters', () => {
         { id: 'immowelt', name: 'Immowelt' },
       ]);
     });
+
+    it('preserves several active provider filters even if unconfigured in the current job', () => {
+      const jobs = [{ id: 'j1', name: 'Job 1', provider: [{ id: 'immoscout' }] }];
+      const result = filterConfiguredProviders(allProviders, jobs, 'j1', ['kleinanzeigen', 'wgGesucht']);
+      expect(result).toEqual([
+        { id: 'immoscout', name: 'ImmoScout24' },
+        { id: 'kleinanzeigen', name: 'Kleinanzeigen' },
+        { id: 'wgGesucht', name: 'WG-Gesucht' },
+      ]);
+    });
   });
 
-  describe('multi-select filters (aiVerdict, icVerdict, job)', () => {
+  describe('multi-select filters (aiVerdict, icVerdict, job, provider)', () => {
     it('counts a multi-select filter as one filter, not one per value', () => {
       const values = { ...defaults(), aiVerdict: ['good', 'maybe'] };
       expect(isActiveFilter('aiVerdict', values)).toBe(true);
@@ -307,6 +317,28 @@ describe('listingFilters', () => {
       const next = { ...values, ...clearFilter('job') };
       expect(next.job).toBe(null);
       expect(isActiveFilter('job', next)).toBe(false);
+    });
+
+    it('joins several selected providers by name, same as a single provider would resolve one', () => {
+      const chips = describeActiveFilters(
+        { ...defaults(), ...clearAllFilters(), provider: ['immoscout', 'immowelt'] },
+        {
+          t,
+          providers: [
+            { id: 'immoscout', name: 'ImmoScout24' },
+            { id: 'immowelt', name: 'Immowelt' },
+          ],
+        },
+      );
+      expect(chips).toEqual([{ key: 'provider', label: 'ImmoScout24, Immowelt' }]);
+    });
+
+    it('counts and clears a multi-select provider filter the same way job does', () => {
+      const values = { ...defaults(), provider: ['immoscout', 'immowelt'] };
+      expect(isActiveFilter('provider', values)).toBe(true);
+      const next = { ...values, ...clearFilter('provider') };
+      expect(next.provider).toBe(null);
+      expect(isActiveFilter('provider', next)).toBe(false);
     });
   });
 });

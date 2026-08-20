@@ -81,7 +81,7 @@ const LISTINGS_URL_STATE = {
   // parseStringArray.
   job: { defaultValue: null, codec: parseStringArray },
   active: { defaultValue: true, codec: parseNullableBoolean },
-  provider: { defaultValue: null, codec: parseString },
+  provider: { defaultValue: null, codec: parseStringArray },
   status: { defaultValue: null, codec: parseString },
   aiVerdict: { defaultValue: null, codec: parseStringArray },
   icVerdict: { defaultValue: null, codec: parseStringArray },
@@ -204,7 +204,7 @@ const ListingsOverview = () => {
         watchListFilter,
         jobNameFilter: toCommaParam(jobNameFilter),
         activityFilter: isHiddenView ? null : activityFilter,
-        providerFilter,
+        providerFilter: toCommaParam(providerFilter),
         statusFilter,
         aiVerdictFilter: toCommaParam(aiVerdictFilter),
         icVerdictFilter: toCommaParam(icVerdictFilter),

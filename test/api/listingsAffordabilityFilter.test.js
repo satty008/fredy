@@ -208,7 +208,9 @@ describe('GET /table affordability filter', () => {
 
     const args = queryListings.mock.calls.at(-1)[0];
     expect(args.statusFilter).toBe('applied');
-    expect(args.providerFilter).toBe('immoscout');
+    // The provider filter is multi-select now: even one value travels as a comma-separated list
+    // and lands here as an array.
+    expect(args.providerFilter).toEqual(['immoscout']);
     expect(args.page).toBe(2);
     expect(args.affordabilityBand).not.toBeNull();
   });

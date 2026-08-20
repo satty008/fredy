@@ -221,7 +221,10 @@ export function describeActiveFilters(values, { t, jobs = [], providers = [] }) 
             minutes: parsed.maxMinutes,
           });
     },
-    provider: () => named(providers, values.provider),
+    provider: () =>
+      toList(values.provider)
+        .map((id) => named(providers, id))
+        .join(', '),
     job: () =>
       toList(values.job)
         .map((id) => named(jobs, id))
@@ -248,7 +251,8 @@ export function describeActiveFilters(values, { t, jobs = [], providers = [] }) 
  * @param {Array<{id: string, name?: string, provider?: Array<{id?: string, name?: string}>}>} [jobs]
  * @param {string|string[]|null} [selectedJobId] One job id, or several now that the job filter is
  *   multi-select.
- * @param {string|null} [currentProviderId]
+ * @param {string|string[]|null} [currentProviderId] One provider id, or several now that the
+ *   provider filter is multi-select.
  * @param {string[]|null} [availableProviders] Distinct provider IDs that have results
  * @returns {{id: string, name: string}[]}
  */
@@ -263,11 +267,13 @@ export function filterConfiguredProviders(
     return [];
   }
 
+  const currentProviderIds = toList(currentProviderId);
+
   // 1. If concrete result providers from listings exist, prioritize them
   if (Array.isArray(availableProviders) && availableProviders.length > 0) {
     const resultProviderIds = new Set(availableProviders);
     return providers.filter(
-      (provider) => resultProviderIds.has(provider.id) || (currentProviderId && provider.id === currentProviderId),
+      (provider) => resultProviderIds.has(provider.id) || currentProviderIds.includes(provider.id),
     );
   }
 
@@ -301,6 +307,6 @@ export function filterConfiguredProviders(
   }
 
   return providers.filter(
-    (provider) => configuredProviderIds.has(provider.id) || (currentProviderId && provider.id === currentProviderId),
+    (provider) => configuredProviderIds.has(provider.id) || currentProviderIds.includes(provider.id),
   );
 }

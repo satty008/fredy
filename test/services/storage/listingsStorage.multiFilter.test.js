@@ -40,13 +40,17 @@ const addJob = (id, { userId = 'u1', dealType = 'rent', name = id } = {}) =>
     .prepare(`INSERT INTO jobs (id, user_id, shared_with_user, name, deal_type) VALUES (?, ?, '[]', ?, ?)`)
     .run(id, userId, name, dealType);
 
-const addListing = (id, jobId, { price = null, size = null, address = null, aiVerdict = null } = {}) =>
+const addListing = (
+  id,
+  jobId,
+  { price = null, size = null, address = null, aiVerdict = null, provider = 'demo' } = {},
+) =>
   db
     .prepare(
       `INSERT INTO listings (id, job_id, title, address, price, size, provider, is_active, manually_deleted, ai_verdict, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, 'demo', 1, 0, ?, 0)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, 1, 0, ?, 0)`,
     )
-    .run(id, jobId, id, address, price, size, aiVerdict);
+    .run(id, jobId, id, address, price, size, provider, aiVerdict);
 
 const idsOf = (page) => page.result.map((r) => r.id).sort();
 
@@ -128,6 +132,29 @@ describe('queryListings - multi-select filters', () => {
       const page = queryListings({ aiVerdictFilter: ['good', 'bad'], userId: 'u1', isAdmin: true });
 
       expect(idsOf(page)).toEqual(['bad1', 'good1']);
+    });
+  });
+
+  describe('provider (multi-select)', () => {
+    it('returns listings from any of several selected providers, not just the first', () => {
+      addJob('j1');
+      addListing('a', 'j1', { provider: 'immoscout' });
+      addListing('b', 'j1', { provider: 'immowelt' });
+      addListing('c', 'j1', { provider: 'kleinanzeigen' });
+
+      const page = queryListings({ providerFilter: ['immoscout', 'immowelt'], userId: 'u1', isAdmin: true });
+
+      expect(idsOf(page)).toEqual(['a', 'b']);
+    });
+
+    it('still works with the single-name form other callers (finance/mcp) use', () => {
+      addJob('j1');
+      addListing('a', 'j1', { provider: 'immoscout' });
+      addListing('b', 'j1', { provider: 'immowelt' });
+
+      const page = queryListings({ providerFilter: 'immoscout', userId: 'u1', isAdmin: true });
+
+      expect(idsOf(page)).toEqual(['a']);
     });
   });
 
