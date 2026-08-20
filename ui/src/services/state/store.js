@@ -479,6 +479,21 @@ export const useFredyState = create(
               throw Exception;
             }
           },
+          /**
+           * Overrule rent-data.json's rent-per-m² lookup for one listing with a monthly EUR cold
+           * rent the user typed in themselves. `coldRent: null` clears the override.
+           *
+           * @param {string} listingId
+           * @param {number|null} coldRent - EUR/month, or null to clear the override.
+           */
+          async setColdRentOverride(listingId, coldRent) {
+            try {
+              await xhrPost(`/api/listings/${listingId}/cold-rent-override`, { coldRent });
+            } catch (Exception) {
+              console.error(`Error while trying to set cold rent override for listing ${listingId}. Error:`, Exception);
+              throw Exception;
+            }
+          },
           async restoreListings(ids) {
             try {
               await xhrPost('/api/listings/restore', { ids });

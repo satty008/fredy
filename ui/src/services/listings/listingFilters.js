@@ -34,6 +34,7 @@ export const NEUTRAL = {
   status: null,
   aiVerdict: null,
   icVerdict: null,
+  priceFactor: null,
   afford: null,
   commute: null,
   hidden: false,
@@ -56,6 +57,7 @@ export const FILTER_KEYS = [
   'status',
   'aiVerdict',
   'icVerdict',
+  'priceFactor',
   'afford',
   'commute',
   'provider',
@@ -64,9 +66,9 @@ export const FILTER_KEYS = [
 
 /**
  * Normalizes a filter value that may be a single id/verdict or an array of them (aiVerdict,
- * icVerdict and job are multi-select; every other filter here stays single-valued) into a plain
- * array, so the two call sites below that need to iterate don't each have to know which shape a
- * given filter happens to be.
+ * icVerdict, priceFactor and job are multi-select; every other filter here stays single-valued)
+ * into a plain array, so the two call sites below that need to iterate don't each have to know
+ * which shape a given filter happens to be.
  *
  * @param {*} value
  * @returns {Array}
@@ -205,6 +207,16 @@ export function describeActiveFilters(values, { t, jobs = [], providers = [] }) 
           none: t('listings.filterIcVerdictUnavailable'),
         })[v] ?? v;
       return toList(values.icVerdict).map(label).join(', ');
+    },
+    priceFactor: () => {
+      const label = (v) =>
+        ({
+          good: t('listings.filterImmocockpitVerdictGood'),
+          maybe: t('listings.filterImmocockpitVerdictMaybe'),
+          bad: t('listings.filterImmocockpitVerdictBad'),
+          none: t('listings.filterIcVerdictUnavailable'),
+        })[v] ?? v;
+      return toList(values.priceFactor).map(label).join(', ');
     },
     afford: () =>
       ({

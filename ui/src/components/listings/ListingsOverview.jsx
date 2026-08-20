@@ -85,6 +85,7 @@ const LISTINGS_URL_STATE = {
   status: { defaultValue: null, codec: parseString },
   aiVerdict: { defaultValue: null, codec: parseStringArray },
   icVerdict: { defaultValue: null, codec: parseStringArray },
+  priceFactor: { defaultValue: null, codec: parseStringArray },
   afford: { defaultValue: null, codec: parseString },
   // Mode and ceiling in one key, as `transit:30`. Two keys would let a bookmarked URL carry half a
   // filter, which the server would then have to guess the other half of.
@@ -104,9 +105,9 @@ function toTravelTimeQuery(value) {
 }
 
 /**
- * A multi-select filter's value (job, aiVerdict, icVerdict) lives in state as an array, but the
- * API query string is one flat parameter per filter - so it travels as the same comma-separated
- * form the URL already uses, and the server splits it back apart.
+ * A multi-select filter's value (job, aiVerdict, icVerdict, priceFactor) lives in state as an
+ * array, but the API query string is one flat parameter per filter - so it travels as the same
+ * comma-separated form the URL already uses, and the server splits it back apart.
  *
  * @param {string[]|null} value
  * @returns {string|null}
@@ -151,6 +152,7 @@ const ListingsOverview = () => {
     status: statusFilter,
     aiVerdict: aiVerdictFilter,
     icVerdict: icVerdictFilter,
+    priceFactor: priceFactorFilter,
     afford: affordabilityFilter,
     commute: commuteFilter,
     hidden: hiddenOnly,
@@ -208,6 +210,7 @@ const ListingsOverview = () => {
         statusFilter,
         aiVerdictFilter: toCommaParam(aiVerdictFilter),
         icVerdictFilter: toCommaParam(icVerdictFilter),
+        priceFactorFilter: toCommaParam(priceFactorFilter),
         // The server turns this into a price range from the saved profile; it ignores the
         // filter entirely when there is no profile to derive one from.
         affordabilityFilter,
@@ -237,6 +240,7 @@ const ListingsOverview = () => {
     statusFilter,
     aiVerdictFilter,
     icVerdictFilter,
+    priceFactorFilter,
     affordabilityFilter,
     commuteFilter,
     hiddenOnly,

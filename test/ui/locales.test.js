@@ -53,6 +53,17 @@ const UNTRANSLATED_BACKLOG = {
     'map.expand',
     'map.collapse',
     'map.expandedLabel',
+    'listings.filterPriceFactorPlaceholder',
+    'listings.filterPriceFactorHelp',
+    'listing.detail.editColdRent',
+    'listing.detail.editColdRentHint',
+    'listing.detail.coldRentOverridePlaceholder',
+    'listing.detail.coldRentOverrideSave',
+    'listing.detail.coldRentOverrideClear',
+    'listing.detail.coldRentOverrideActive',
+    'listing.detail.toastColdRentOverrideSaved',
+    'listing.detail.toastColdRentOverrideCleared',
+    'listing.detail.toastColdRentOverrideError',
   ],
 };
 

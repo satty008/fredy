@@ -143,6 +143,22 @@ export default function ListingsFilterPanel({
           <Select.Option value="bad">{t('listings.filterImmocockpitVerdictBad')}</Select.Option>
           <Select.Option value="none">{t('listings.filterIcVerdictUnavailable')}</Select.Option>
         </FilterSelect>
+
+        <FilterSelect
+          help={t('listings.filterPriceFactorHelp')}
+          placeholder={t('listings.filterPriceFactorPlaceholder')}
+          multiple
+          maxTagCount={2}
+          showClear
+          onChange={(vals) => onChange({ priceFactor: vals?.length > 0 ? vals : null, page: 1 })}
+          value={values.priceFactor ?? []}
+          style={{ width: '100%' }}
+        >
+          <Select.Option value="good">{t('listings.filterImmocockpitVerdictGood')}</Select.Option>
+          <Select.Option value="maybe">{t('listings.filterImmocockpitVerdictMaybe')}</Select.Option>
+          <Select.Option value="bad">{t('listings.filterImmocockpitVerdictBad')}</Select.Option>
+          <Select.Option value="none">{t('listings.filterIcVerdictUnavailable')}</Select.Option>
+        </FilterSelect>
       </FilterGroup>
 
       {(financeComplete || hasAddresses) && (

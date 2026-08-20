@@ -45,7 +45,7 @@ import * as timeService from '../../services/time/timeService.js';
 import { formatEuroPrice } from '../../services/price/priceService.js';
 import { getBoundsFromCoords } from './mapUtils.js';
 import { applyRouteLayers, buildRouteData } from './detailMapLayers.js';
-import { TRAVEL_MODES } from '../../components/transit/travelTimeFormat.js';
+import { TRAVEL_MODES, formatRoadDistance } from '../../components/transit/travelTimeFormat.js';
 import { getAddresses } from '../../utils.js';
 import { xhrPost, xhrGet, xhrDelete, errorMessage } from '../../services/xhr.js';
 import ListingDeletionModal from '../../components/ListingDeletionModal.jsx';
@@ -60,6 +60,7 @@ import PriceHistoryChart from './components/PriceHistoryChart.jsx';
 import NearbyStops from '../../components/transit/NearbyStops.jsx';
 import TravelTimes from '../../components/transit/TravelTimes.jsx';
 import AddressEditor from './components/AddressEditor.jsx';
+import ColdRentOverrideEditor from './components/ColdRentOverrideEditor.jsx';
 import './ListingDetail.less';
 import { useTranslation, useLocale } from '../../services/i18n/i18n.jsx';
 import { useFinanceProfile } from '../../hooks/useFinanceProfile.js';
@@ -404,6 +405,29 @@ export default function ListingDetail() {
   };
 
   /**
+   * Store (or clear) the cold rent override, then re-read the listing so the yield and IC verdict
+   * badges recalculate immediately.
+   *
+   * @param {number|null} coldRent
+   */
+  const saveColdRentOverride = async (coldRent) => {
+    try {
+      await actions.listingsData.setColdRentOverride(listingId, coldRent);
+      await actions.listingsData.getListing(listingId);
+      Toast.success(
+        t(
+          coldRent == null
+            ? 'listing.detail.toastColdRentOverrideCleared'
+            : 'listing.detail.toastColdRentOverrideSaved',
+        ),
+      );
+    } catch (error) {
+      Toast.error(errorMessage(error, t('listing.detail.toastColdRentOverrideError')));
+      throw error;
+    }
+  };
+
+  /**
    * Ask for this listing's coordinates again.
    *
    * The lookup at scrape time is best effort, so a timeout or a rate limit leaves a listing with an
@@ -668,6 +692,7 @@ export default function ListingDetail() {
                     analysis={listing.immocockpitAnalysis}
                   />
                   <PriceFactorBadge analysis={listing.immocockpitAnalysis} />
+                  <ColdRentOverrideEditor currentOverride={listing.cold_rent_override} onSave={saveColdRentOverride} />
                 </Space>
               </div>
               <TextArea
@@ -893,7 +918,7 @@ export default function ListingDetail() {
                     <Text strong>{t('listing.detail.distanceToHome')}</Text>
                     {listing.distances.map((d) => (
                       <Tag color="blue" key={d.label}>
-                        {d.label}: {d.meters} m
+                        {d.label}: {formatRoadDistance(d.meters)}
                       </Tag>
                     ))}
                   </Space>

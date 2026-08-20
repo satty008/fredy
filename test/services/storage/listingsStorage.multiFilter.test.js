@@ -10,10 +10,11 @@ import os from 'os';
 import path from 'path';
 
 /**
- * queryListings runs plain SQL (plus a JS-side pass for immocockpitVerdictFilter), so these tests
- * back the mocked SqliteConnection with a real in-memory database rather than asserting on
- * statement strings - the thing worth proving is that a multi-select filter (job, aiVerdict,
- * icVerdict) returns the union of every selected value, not just the first one.
+ * queryListings runs plain SQL (plus a JS-side pass for immocockpitVerdictFilter/priceFactorFilter),
+ * so these tests back the mocked SqliteConnection with a real in-memory database rather than
+ * asserting on statement strings - the thing worth proving is that a multi-select filter (job,
+ * aiVerdict, icVerdict, priceFactor) returns the union of every selected value, not just the first
+ * one, and that the two JS-side filters combine as an AND rather than each being applied alone.
  */
 let db;
 
@@ -171,6 +172,40 @@ describe('queryListings - multi-select filters', () => {
 
       expect(idsOf(page)).toEqual(['cheap', 'pricey']);
       expect(page.totalNumber).toBe(2);
+    });
+  });
+
+  describe('priceFactor (multi-select, JS-side)', () => {
+    it('unions several price-factor tiers and reports the correct total for the union', () => {
+      addJob('buyJob', { dealType: 'buy' });
+      // Same fixture as icVerdict above - price ÷ (12 EUR/m² × 60m² × 12) factors to
+      // good (6.9x) / maybe (23.1x) / bad (57.9x) respectively.
+      addListing('cheap', 'buyJob', { price: 60000, size: 60, address: '48143 Münster' });
+      addListing('mid', 'buyJob', { price: 200000, size: 60, address: '48143 Münster' });
+      addListing('pricey', 'buyJob', { price: 500000, size: 60, address: '48143 Münster' });
+
+      const page = queryListings({ priceFactorFilter: ['good', 'bad'], userId: 'u1', isAdmin: true });
+
+      expect(idsOf(page)).toEqual(['cheap', 'pricey']);
+      expect(page.totalNumber).toBe(2);
+    });
+
+    it('combines with icVerdictFilter as an AND across the two independent tiers', () => {
+      addJob('buyJob', { dealType: 'buy' });
+      addListing('cheap', 'buyJob', { price: 60000, size: 60, address: '48143 Münster' });
+      addListing('mid', 'buyJob', { price: 200000, size: 60, address: '48143 Münster' });
+      addListing('pricey', 'buyJob', { price: 500000, size: 60, address: '48143 Münster' });
+
+      // icVerdict alone would include cheap and pricey; priceFactor alone would include just
+      // pricey (bad) - the combination must be their intersection, not their union.
+      const page = queryListings({
+        immocockpitVerdictFilter: ['good', 'bad'],
+        priceFactorFilter: ['bad'],
+        userId: 'u1',
+        isAdmin: true,
+      });
+
+      expect(idsOf(page)).toEqual(['pricey']);
     });
   });
 });
