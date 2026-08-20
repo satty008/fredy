@@ -79,7 +79,7 @@ const LISTINGS_URL_STATE = {
   // parseStringArray.
   job: { defaultValue: null, codec: parseStringArray },
   active: { defaultValue: true, codec: parseNullableBoolean },
-  provider: { defaultValue: null, codec: parseString },
+  provider: { defaultValue: null, codec: parseStringArray },
   status: { defaultValue: null, codec: parseString },
   aiVerdict: { defaultValue: null, codec: parseStringArray },
   icVerdict: { defaultValue: null, codec: parseStringArray },

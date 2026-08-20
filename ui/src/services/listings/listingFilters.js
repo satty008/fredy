@@ -230,7 +230,7 @@ export function toListingsQuery(values) {
       watchListFilter: values.watch,
       jobNameFilter: toCommaParam(values.job),
       activityFilter: isHiddenView ? null : values.active,
-      providerFilter: values.provider,
+      providerFilter: toCommaParam(values.provider),
       statusFilter: values.status,
       aiVerdictFilter: toCommaParam(values.aiVerdict),
       icVerdictFilter: toCommaParam(values.icVerdict),
@@ -322,7 +322,10 @@ export function describeActiveFilters(values, { t, jobs = [], providers = [] }) 
             operator: t(`connectivity.operator.${operator}`),
           });
     },
-    provider: () => named(providers, values.provider),
+    provider: () =>
+      toList(values.provider)
+        .map((id) => named(providers, id))
+        .join(', '),
     job: () =>
       toList(values.job)
         .map((id) => named(jobs, id))
@@ -419,7 +422,8 @@ export function quickFilterKeys(values) {
  * @param {Array<{id: string, name?: string, provider?: Array<{id?: string, name?: string}>}>} [jobs]
  * @param {string|string[]|null} [selectedJobId] One job id, or several now that the job filter is
  *   multi-select.
- * @param {string|null} [currentProviderId]
+ * @param {string|string[]|null} [currentProviderId] One provider id, or several now that the
+ *   provider filter is multi-select.
  * @param {string[]|null} [availableProviders] Distinct provider IDs that have results
  * @returns {{id: string, name: string}[]}
  */
@@ -434,11 +438,13 @@ export function filterConfiguredProviders(
     return [];
   }
 
+  const currentProviderIds = toList(currentProviderId);
+
   // 1. If concrete result providers from listings exist, prioritize them
   if (Array.isArray(availableProviders) && availableProviders.length > 0) {
     const resultProviderIds = new Set(availableProviders);
     return providers.filter(
-      (provider) => resultProviderIds.has(provider.id) || (currentProviderId && provider.id === currentProviderId),
+      (provider) => resultProviderIds.has(provider.id) || currentProviderIds.includes(provider.id),
     );
   }
 
@@ -472,6 +478,6 @@ export function filterConfiguredProviders(
   }
 
   return providers.filter(
-    (provider) => configuredProviderIds.has(provider.id) || (currentProviderId && provider.id === currentProviderId),
+    (provider) => configuredProviderIds.has(provider.id) || currentProviderIds.includes(provider.id),
   );
 }

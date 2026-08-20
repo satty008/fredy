@@ -126,7 +126,7 @@ describe('DELETE /filtered', () => {
 
     expect(lastFilters()).toMatchObject({
       freeTextFilter: 'Altbau',
-      providerFilter: 'immoscout',
+      providerFilter: ['immoscout'],
       activityFilter: false,
       watchListFilter: true,
       hiddenOnly: true,
