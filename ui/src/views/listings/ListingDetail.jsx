@@ -466,6 +466,29 @@ export default function ListingDetail() {
   };
 
   /**
+   * Store (or clear) the cold rent override, then re-read the listing so the yield and IC verdict
+   * badges recalculate immediately.
+   *
+   * @param {number|null} coldRent
+   */
+  const saveColdRentOverride = async (coldRent) => {
+    try {
+      await actions.listingsData.setColdRentOverride(listingId, coldRent);
+      await actions.listingsData.getListing(listingId);
+      Toast.success(
+        t(
+          coldRent == null
+            ? 'listing.detail.toastColdRentOverrideCleared'
+            : 'listing.detail.toastColdRentOverrideSaved',
+        ),
+      );
+    } catch (error) {
+      Toast.error(errorMessage(error, t('listing.detail.toastColdRentOverrideError')));
+      throw error;
+    }
+  };
+
+  /**
    * Ask for this listing's coordinates again.
    *
    * The lookup at scrape time is best effort, so a timeout or a rate limit leaves a listing with an
@@ -662,6 +685,8 @@ export default function ListingDetail() {
                 aiVerdict={listing.ai_verdict}
                 immocockpitVerdict={listing.immocockpitVerdict}
                 immocockpitAnalysis={listing.immocockpitAnalysis}
+                coldRentOverride={listing.cold_rent_override}
+                onSaveColdRentOverride={saveColdRentOverride}
                 onRateWithAi={handleRateWithAI}
                 ratingInFlight={ratingInFlight}
                 ratingModel={ratingModel}

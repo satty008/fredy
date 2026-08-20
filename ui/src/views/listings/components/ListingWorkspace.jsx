@@ -7,6 +7,7 @@ import { Button, Select, Tag, TextArea } from '@douyinfe/semi-ui-19';
 
 import ImmocockpitVerdictBadge from '../../../components/listings/ImmocockpitVerdictBadge.jsx';
 import PriceFactorBadge from '../../../components/listings/PriceFactorBadge.jsx';
+import ColdRentOverrideEditor from './ColdRentOverrideEditor.jsx';
 import AttachmentsCard from './AttachmentsCard.jsx';
 import { useTranslation } from '../../../services/i18n/i18n.jsx';
 import './ListingWorkspace.less';
@@ -29,6 +30,8 @@ import './ListingWorkspace.less';
  * @param {('good'|'maybe'|'bad'|null)} [props.aiVerdict] - The stored AI review verdict, if any.
  * @param {('good'|'maybe'|'bad'|null)} [props.immocockpitVerdict] - The server-computed Immocockpit verdict.
  * @param {Object|null} [props.immocockpitAnalysis] - The numbers behind it, for the tooltip.
+ * @param {number|null} [props.coldRentOverride] - The user's own monthly cold rent, if set.
+ * @param {(coldRent: number|null) => Promise<void>} [props.onSaveColdRentOverride]
  * @param {() => void} [props.onRateWithAi]
  * @param {boolean} [props.ratingInFlight]
  * @param {string} [props.ratingModel]
@@ -46,6 +49,8 @@ export default function ListingWorkspace({
   aiVerdict = null,
   immocockpitVerdict = null,
   immocockpitAnalysis = null,
+  coldRentOverride = null,
+  onSaveColdRentOverride,
   onRateWithAi,
   ratingInFlight = false,
   ratingModel,
@@ -77,6 +82,9 @@ export default function ListingWorkspace({
             )}
             <ImmocockpitVerdictBadge verdict={immocockpitVerdict} analysis={immocockpitAnalysis} />
             <PriceFactorBadge analysis={immocockpitAnalysis} />
+            {onSaveColdRentOverride && (
+              <ColdRentOverrideEditor currentOverride={coldRentOverride} onSave={onSaveColdRentOverride} />
+            )}
           </div>
           <TextArea
             value={notesDraft}

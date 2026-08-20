@@ -8,7 +8,7 @@ import { IconClock, IconShield } from '@douyinfe/semi-icons';
 
 import MapCanvas from '../../../components/map/Map.jsx';
 import TravelTimes from '../../../components/transit/TravelTimes.jsx';
-import { answeredModes, TRAVEL_MODES } from '../../../components/transit/travelTimeFormat.js';
+import { answeredModes, formatRoadDistance, TRAVEL_MODES } from '../../../components/transit/travelTimeFormat.js';
 import { useTranslation } from '../../../services/i18n/i18n.jsx';
 import './ListingLocationCard.less';
 
@@ -236,7 +236,7 @@ export default function ListingLocationCard({
             <span className="listing-location__distances">
               {listing.distances.map((distance) => (
                 <span key={distance.label} className="listing-location__distance">
-                  {distance.label}: {distance.meters} m
+                  {distance.label}: {formatRoadDistance(distance.meters) ?? `${distance.meters} m`}
                 </span>
               ))}
             </span>

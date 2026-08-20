@@ -34,6 +34,7 @@ export const NEUTRAL = {
   status: null,
   aiVerdict: null,
   icVerdict: null,
+  priceFactor: null,
   afford: null,
   commute: null,
   down: null,
@@ -60,6 +61,7 @@ export const FILTER_KEYS = [
   'status',
   'aiVerdict',
   'icVerdict',
+  'priceFactor',
   'afford',
   'commute',
   'down',
@@ -234,6 +236,7 @@ export function toListingsQuery(values) {
       statusFilter: values.status,
       aiVerdictFilter: toCommaParam(values.aiVerdict),
       icVerdictFilter: toCommaParam(values.icVerdict),
+      priceFactorFilter: toCommaParam(values.priceFactor),
       // The server turns this into a price range from the saved profile; it ignores the
       // filter entirely when there is no profile to derive one from.
       affordabilityFilter: values.afford,
@@ -294,6 +297,16 @@ export function describeActiveFilters(values, { t, jobs = [], providers = [] }) 
           none: t('listings.filterIcVerdictUnavailable'),
         })[v] ?? v;
       return toList(values.icVerdict).map(label).join(', ');
+    },
+    priceFactor: () => {
+      const label = (v) =>
+        ({
+          good: t('listings.filterImmocockpitVerdictGood'),
+          maybe: t('listings.filterImmocockpitVerdictMaybe'),
+          bad: t('listings.filterImmocockpitVerdictBad'),
+          none: t('listings.filterIcVerdictUnavailable'),
+        })[v] ?? v;
+      return toList(values.priceFactor).map(label).join(', ');
     },
     afford: () =>
       ({

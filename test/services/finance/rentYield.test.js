@@ -80,6 +80,24 @@ describe('rentPerSqmFor', () => {
     // "Grünau" is a Leipzig district; this address never mentions Leipzig at all.
     expect(rentPerSqmFor({ address: 'Grünau 5, 48143 Münster' })).toBe(12);
   });
+
+  describe('cold_rent_override', () => {
+    it('overrides the city lookup, divided by size', () => {
+      expect(rentPerSqmFor({ address: 'Musterstraße 1, 48143 Münster', size: 65, cold_rent_override: 650 })).toBe(10);
+    });
+
+    it('is ignored when size is missing, since a per-m² rate cannot be derived', () => {
+      expect(rentPerSqmFor({ address: 'Musterstraße 1, 48143 Münster', cold_rent_override: 650 })).toBe(12);
+    });
+
+    it('is ignored when null, falling back to the normal lookup', () => {
+      expect(rentPerSqmFor({ address: 'Musterstraße 1, 48143 Münster', size: 65, cold_rent_override: null })).toBe(12);
+    });
+
+    it('wins even when no city matches at all', () => {
+      expect(rentPerSqmFor({ address: 'Irgendwo 5, 99999 Nirgendwo', size: 50, cold_rent_override: 500 })).toBe(10);
+    });
+  });
 });
 
 describe('grossYieldPercent', () => {
@@ -101,6 +119,12 @@ describe('grossYieldPercent', () => {
     fs.rmSync(dataFile, { force: true });
     expect(grossYieldPercent({ price: 200000, size: 60, address: 'Münster' })).toBe(null);
   });
+
+  it('uses cold_rent_override instead of the city lookup when set', () => {
+    // 650 EUR/month * 12 = 7800 annual rent; / 200000 price * 100 = 3.9%
+    const result = grossYieldPercent({ price: 200000, size: 60, address: 'Münster', cold_rent_override: 650 });
+    expect(result).toBeCloseTo(3.9, 5);
+  });
 });
 
 describe('targetRentFor', () => {
@@ -119,6 +143,10 @@ describe('targetRentFor', () => {
   it('returns null when no rent estimate can be found', () => {
     fs.rmSync(dataFile, { force: true });
     expect(targetRentFor({ size: 60, address: 'Münster' })).toBe(null);
+  });
+
+  it('round-trips cold_rent_override, ignoring the city lookup', () => {
+    expect(targetRentFor({ size: 60, address: 'Münster', cold_rent_override: 900 })).toBe(900);
   });
 });
 
