@@ -65,7 +65,9 @@ On top of the listing itself, Fredy answers two questions:
     Discord, Mattermost, Pushover, Apprise and more
 -   🔎 Uses the **ImmoScout Mobile API** (reverse engineered)
 -   🖥️ **Web UI** to create and manage searches
--   🔄 Deduplication across platforms
+-   🔄 **Deduplication across platforms**: the same flat advertised on ImmoScout, Immowelt and
+    Kleinanzeigen reaches you once, matched on living space, rooms and location rather than on
+    the headline - no two portals write that the same way
 -   ⏱️ Configurable search intervals and working hours
 -   💶 **Financing calculator**: which listings you can afford, for renting and for buying
 -   🚆 **Real travel times** from your addresses by public transport, car, bike or on foot,
@@ -117,6 +119,12 @@ docker run -d --name fredy \
 
 `:master` follows the master branch. To pin a release instead, use its version tag, for example
 `ghcr.io/orangecoding/fredy:26.5.1`. Images are built for `linux/amd64` and `linux/arm64`.
+
+There is also a pre-release channel that follows the `develop` branch:
+`ghcr.io/orangecoding/fredy-pre-release:latest`. It is built from the same pipeline (lint, format
+check and the offline test suite all have to pass first), but the changes in it have not been
+through master yet. Use it to try upcoming features or to verify a fix, not for an instance you
+rely on.
 
 Logs:
 
