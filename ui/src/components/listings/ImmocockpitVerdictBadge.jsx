@@ -13,7 +13,7 @@ import './ImmocockpitVerdictBadge.less';
 /**
  * A listing's immocockpit buy-to-let verdict (good/maybe/bad) - the same verdict opening
  * "Analyze in Immocockpit" on this listing would compute, using immocockpit's own screening
- * defaults (100% financing at 4.6%/2%, a married/€100k-taxable-income buyer profile). Server-
+ * defaults (85% financing at 4.6%/2%, a married/€100k-taxable-income buyer profile). Server-
  * computed, same reasoning as AffordabilityChip: the badge on a row must never disagree with
  * what the deep-link would actually show.
  *
