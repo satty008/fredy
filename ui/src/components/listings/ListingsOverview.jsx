@@ -90,6 +90,12 @@ const LISTINGS_URL_STATE = {
   // Mode and ceiling in one key, as `transit:30`. Two keys would let a bookmarked URL carry half a
   // filter, which the server would then have to guess the other half of.
   commute: { defaultValue: null, codec: parseString },
+  down: { defaultValue: null, codec: parseNumber },
+  fiber: { defaultValue: null, codec: parseNullableBoolean },
+  // Technology and operator are two keys rather than one packed value, unlike the commute filter
+  // above: the operator is optional here, so half of it is a complete filter on its own.
+  mtech: { defaultValue: null, codec: parseString },
+  mop: { defaultValue: null, codec: parseString },
   hidden: { defaultValue: false, codec: parseNullableBoolean },
 };
 
@@ -124,6 +130,7 @@ const ListingsOverview = () => {
   const pois = useSelector((state) => state.tracking.pois);
   const jobs = useSelector((state) => state.jobsData.jobs);
   const userSettings = useSelector((state) => state.userSettings.settings);
+  const generalSettings = useSelector((state) => state.generalSettings.settings);
   const actions = useActions();
   const navigate = useNavigate();
   const sp = useSearchParams();
@@ -155,6 +162,10 @@ const ListingsOverview = () => {
     priceFactor: priceFactorFilter,
     afford: affordabilityFilter,
     commute: commuteFilter,
+    down: connectivityMinDown,
+    fiber: connectivityFiber,
+    mtech: connectivityMobileTech,
+    mop: connectivityMobileOperator,
     hidden: hiddenOnly,
   } = values;
   const setPage = (value) => setValue('page', value);
@@ -217,6 +228,12 @@ const ListingsOverview = () => {
         // Only listings that have actually been routed can satisfy this, which is why the control
         // is offered as an extra filter rather than as the default way to sort the page.
         ...(toTravelTimeQuery(commuteFilter) ?? {}),
+        connectivityMinDown,
+        connectivityFiber,
+        connectivityMobileTech,
+        // Sent only alongside a technology. On its own the server ignores it anyway, but leaving
+        // it out of the request keeps the query string honest about what is being asked.
+        connectivityMobileOperator: connectivityMobileTech == null ? null : connectivityMobileOperator,
         hiddenOnly: isHiddenView ? true : undefined,
       },
     });
@@ -338,6 +355,17 @@ const ListingsOverview = () => {
     } catch (e) {
       console.error(e);
       Toast.error(t('listings.toastRestoreError'));
+    }
+  };
+
+  const handleReactivate = async (id) => {
+    try {
+      await actions.listingsData.reactivateListings([id]);
+      Toast.success(t('listings.toastReactivated'));
+      loadData();
+    } catch (e) {
+      console.error(e);
+      Toast.error(t('listings.toastReactivateError'));
     }
   };
 
@@ -511,7 +539,17 @@ const ListingsOverview = () => {
         financeComplete={financeComplete}
         affordabilityHelp={affordabilityHelp}
         hasAddresses={hasAddresses}
+        connectivityEnabled={generalSettings?.connectivityEnabled === true}
         onAffordabilityUsed={() => actions.tracking.trackPoi(pois.FINANCE_AFFORDABILITY_FILTER_USED)}
+        onConnectivityFilterUsed={(kind) =>
+          actions.tracking.trackPoi(
+            {
+              downstream: pois.CONNECTIVITY_FILTER_DOWNSTREAM,
+              fiber: pois.CONNECTIVITY_FILTER_FIBER,
+              mobile: pois.CONNECTIVITY_FILTER_MOBILE,
+            }[kind],
+          )
+        }
       />
 
       {newAvailableCount > 0 && (
@@ -600,6 +638,7 @@ const ListingsOverview = () => {
           onNavigate={handleNavigate}
           onDelete={handleDelete}
           onRestore={handleRestore}
+          onReactivate={handleReactivate}
           isHiddenView={isHiddenView}
           onStatusChange={handleStatusChange}
           selectedIds={selectedIds}
@@ -612,6 +651,7 @@ const ListingsOverview = () => {
           onNavigate={handleNavigate}
           onDelete={handleDelete}
           onRestore={handleRestore}
+          onReactivate={handleReactivate}
           isHiddenView={isHiddenView}
           onStatusChange={handleStatusChange}
           selectedIds={selectedIds}

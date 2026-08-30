@@ -37,6 +37,25 @@ describe('#inberlinwohnen internals()', () => {
     vi.restoreAllMocks();
   });
 
+  describe('createConfig()', () => {
+    it.each([
+      ['/mein-bereich/wohnungsfinder', '/wohnungsfinder/'],
+      ['/mein-bereich/wohnungsfinder/', '/wohnungsfinder/'],
+    ])('should replace the saved private search path %s', (privatePath, publicPath) => {
+      const privateUrl = `https://www.inberlinwohnen.de${privatePath}?q=opaque-filter&district=mitte`;
+
+      const privateRunConfig = provider.createConfig({ url: privateUrl, enabled: true }, []);
+
+      expect(privateRunConfig.url).toBe(`https://www.inberlinwohnen.de${publicPath}?q=opaque-filter&district=mitte`);
+    });
+
+    it('should leave public search URLs unchanged', () => {
+      const publicUrl = 'https://www.inberlinwohnen.de/wohnungsfinder/?q=opaque-filter&district=mitte';
+
+      expect(provider.createConfig({ url: publicUrl, enabled: true }, []).url).toBe(publicUrl);
+    });
+  });
+
   describe('getListings()', () => {
     it('should fetch every server-rendered result page', async () => {
       const pagination = paginationElement([1, 2, 3, 4, 5], 2);
@@ -139,6 +158,17 @@ describe('#inberlinwohnen internals()', () => {
       expect(objectListing.link).toBe('https://inberlinwohnen.de/wohnungsfinder/fallback');
       expect(netRentListing.price).toBe(428.38);
       expect(netRentListing.id).toBe(objectListing.id);
+    });
+
+    it('should quote the cold rent when the listing publishes both', () => {
+      // The affordability check adds the Nebenkosten surcharge to `price` itself, so a listing
+      // carrying both figures has to hand over the Kaltmiete - quoting the Gesamtmiete counted the
+      // Nebenkosten twice. The Gesamtmiete stays in the description, where it costs nothing.
+      const listing = normalize({ ...baseItem, rentNet: '800', extraCosts: '183', rentGross: '983,08' });
+
+      expect(listing.price).toBe(800);
+      expect(listing.description).toContain('Kaltmiete: 800 €');
+      expect(listing.description).toContain('Gesamtmiete: 983,08 €');
     });
 
     it('should reject links that do not point at the portal or a known partner', () => {

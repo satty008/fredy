@@ -12,9 +12,11 @@ import PreferencesPage from './views/settings/pages/PreferencesPage';
 import TravelTimePage from './views/settings/pages/TravelTimePage';
 import ListingDetailsPage from './views/settings/pages/ListingDetailsPage';
 import NotificationsPage from './views/settings/pages/NotificationsPage';
+import ConnectionsPage from './views/settings/pages/ConnectionsPage';
 import AdminLayout from './views/admin/AdminLayout';
 import SystemPage from './views/admin/pages/SystemPage';
 import ExecutionPage from './views/admin/pages/ExecutionPage';
+import ConnectivityPage from './views/admin/pages/ConnectivityPage';
 import BackupPage from './views/admin/pages/BackupPage';
 import DebugPage from './views/admin/pages/DebugPage';
 import JobMutation from './views/jobs/mutation/JobMutation';
@@ -220,13 +222,14 @@ export default function FredyApp() {
 
                   {/* Settings that belong to whoever is signed in. No guard: they are theirs.
                       One entry in the sidebar, and the tabs below the heading are the only place
-                      these four pages are named. */}
+                      these five pages are named. */}
                   <Route path="/settings" element={<SettingsLayout />}>
                     <Route index element={<Navigate to="/settings/preferences" replace />} />
                     <Route path="preferences" element={<PreferencesPage />} />
                     <Route path="travel-time" element={<TravelTimePage />} />
                     <Route path="listings" element={<ListingDetailsPage />} />
                     <Route path="notifications" element={<NotificationsPage />} />
+                    <Route path="connections" element={<ConnectionsPage />} />
                   </Route>
 
                   {/* Settings that belong to the instance. Guarded once, at the parent, so a new
@@ -242,6 +245,7 @@ export default function FredyApp() {
                     <Route index element={<Navigate to="/admin/system" replace />} />
                     <Route path="system" element={<SystemPage />} />
                     <Route path="execution" element={<ExecutionPage />} />
+                    <Route path="connectivity" element={<ConnectivityPage />} />
                     <Route path="users" element={<Users />} />
                     <Route path="users/new" element={<UserMutator />} />
                     <Route path="users/edit/:userId" element={<UserMutator />} />

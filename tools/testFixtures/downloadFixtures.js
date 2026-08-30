@@ -15,26 +15,48 @@ const ROOT = path.join(__dirname, '../..');
 const FIXTURES_DIR = path.join(ROOT, 'test', 'testFixtures');
 const TEST_PROVIDER_PATH = path.join(ROOT, 'test', 'provider', 'testProvider.json');
 
+/**
+ * The list endpoint caps a page at 50 and the provider walks the rest with `offset`, so a fixture
+ * of the first page alone would be a truncated search - `paging.info.count` promising listings the
+ * offline suite can never reach. The pages are merged into one payload instead, keeping the first
+ * response's `paging` so the offline fetch mock can serve them back sliced, page by page.
+ */
 async function downloadDeutscheWohnenFixtures(apiUrl, refererUrl) {
   console.log('\nDownloading deutscheWohnen...');
 
-  const listResponse = await fetch(apiUrl, {
-    headers: {
-      'User-Agent':
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36',
-      Accept: 'application/json',
-      Referer: refererUrl,
-    },
-  });
+  const headers = {
+    'User-Agent':
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36',
+    Accept: 'application/json',
+    Referer: refererUrl,
+  };
 
-  if (!listResponse.ok) {
-    console.warn(`  Failed to download deutscheWohnen list: ${listResponse.statusText}`);
-    return;
+  const pageSize = Number.parseInt(new URL(apiUrl).searchParams.get('limit') ?? '', 10) || 50;
+  const listData = { paging: null, results: [] };
+
+  for (let page = 0; page < 10; page++) {
+    const pageUrl = new URL(apiUrl);
+    if (page > 0) {
+      pageUrl.searchParams.set('offset', String(page * pageSize));
+    }
+
+    const listResponse = await fetch(pageUrl, { headers });
+    if (!listResponse.ok) {
+      console.warn(`  Failed to download deutscheWohnen list: ${listResponse.statusText}`);
+      if (page === 0) return;
+      break;
+    }
+
+    const body = await listResponse.json();
+    listData.paging ??= body.paging ?? null;
+    listData.results.push(...(body.results ?? []));
+
+    const total = body?.paging?.info?.count;
+    if ((body.results ?? []).length === 0 || total == null || listData.results.length >= total) break;
   }
 
-  const listData = await listResponse.json();
   await writeFile(path.join(FIXTURES_DIR, 'deutscheWohnen_list.json'), JSON.stringify(listData, null, 2), 'utf-8');
-  console.log('  Saved deutscheWohnen_list.json');
+  console.log(`  Saved deutscheWohnen_list.json (${listData.results.length} listings)`);
 
   const firstListing = listData.results?.[0];
   if (!firstListing?.slug) {
@@ -59,6 +81,104 @@ async function downloadDeutscheWohnenFixtures(apiUrl, refererUrl) {
   const detailHtml = await detailResponse.text();
   await writeFile(path.join(FIXTURES_DIR, 'deutscheWohnen_detail.html'), detailHtml, 'utf-8');
   console.log('  Saved deutscheWohnen_detail.html');
+}
+
+/** A desktop browser, which is what both portals below answer fastest. */
+const BROWSER_USER_AGENT =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+
+/**
+ * willhaben's search page, cut down to the one script tag the provider reads.
+ *
+ * The live page is around 600 KB of Next.js bootstrap wrapped around a single `__NEXT_DATA__`
+ * payload. Keeping only that tag gives a fixture small enough to open in a diff and still exercises
+ * the real parsing path, because the provider looks the tag up by id rather than by position.
+ *
+ * @param {string} url the search url from testProvider.json
+ * @returns {Promise<void>}
+ */
+async function downloadWillhabenFixtures(url) {
+  console.log('\nDownloading willhaben...');
+
+  const response = await fetch(url, {
+    headers: { 'User-Agent': BROWSER_USER_AGENT, 'Accept-Language': 'de-AT,de;q=0.9' },
+  });
+
+  if (!response.ok) {
+    console.warn(`  Failed to download willhaben: ${response.statusText}`);
+    return;
+  }
+
+  const html = await response.text();
+  const match = html.match(/<script id="__NEXT_DATA__"[^>]*>[\s\S]*?<\/script>/);
+  if (!match) {
+    console.warn('  willhaben page carried no __NEXT_DATA__ - skipping fixture');
+    return;
+  }
+
+  const trimmed = [
+    '<!doctype html>',
+    '<html lang="de">',
+    `<head><title>willhaben fixture</title></head>`,
+    '<body>',
+    `<!-- Trimmed to the __NEXT_DATA__ payload, downloaded from ${url} -->`,
+    match[0],
+    '</body>',
+    '</html>',
+    '',
+  ].join('\n');
+
+  await writeFile(path.join(FIXTURES_DIR, 'willhaben.html'), trimmed, 'utf-8');
+  console.log('  Saved willhaben.html');
+}
+
+/**
+ * Flatfox answers a search in two requests, so it needs two fixtures.
+ *
+ * The pins carry the primary keys of everything matching the search; the second call hydrates those
+ * keys into listings. Recording both is what lets the offline suite exercise the same two-step the
+ * provider performs live.
+ *
+ * @param {string} url the search url from testProvider.json
+ * @returns {Promise<void>}
+ */
+async function downloadFlatfoxFixtures(url) {
+  console.log('\nDownloading flatfox...');
+
+  const headers = { 'User-Agent': BROWSER_USER_AGENT, Accept: 'application/json' };
+  const search = new URLSearchParams(new URL(url).search);
+  search.set('max_count', '100');
+
+  const pinResponse = await fetch(`https://flatfox.ch/api/v1/pin/?${search}`, { headers });
+  if (!pinResponse.ok) {
+    console.warn(`  Failed to download flatfox pins: ${pinResponse.statusText}`);
+    return;
+  }
+
+  const pins = await pinResponse.json();
+  await writeFile(path.join(FIXTURES_DIR, 'flatfox_pins.json'), JSON.stringify(pins, null, 2), 'utf-8');
+  console.log(`  Saved flatfox_pins.json (${Array.isArray(pins) ? pins.length : 0} pins)`);
+
+  const keys = (Array.isArray(pins) ? pins : (pins.results ?? [])).map((pin) => pin?.pk).filter((pk) => pk != null);
+  if (keys.length === 0) {
+    console.warn('  No pins returned - skipping listing fixture');
+    return;
+  }
+
+  const query = new URLSearchParams({ expand: 'cover_image', limit: '0' });
+  for (const key of keys) {
+    query.append('pk', String(key));
+  }
+
+  const listingResponse = await fetch(`https://flatfox.ch/api/v1/public-listing/?${query}`, { headers });
+  if (!listingResponse.ok) {
+    console.warn(`  Failed to download flatfox listings: ${listingResponse.statusText}`);
+    return;
+  }
+
+  const listings = await listingResponse.json();
+  await writeFile(path.join(FIXTURES_DIR, 'flatfox_listings.json'), JSON.stringify(listings, null, 2), 'utf-8');
+  console.log('  Saved flatfox_listings.json');
 }
 
 async function downloadImmoscoutFixtures(mobileApiUrl) {
@@ -356,6 +476,12 @@ async function main() {
         break;
       case 'immowelt':
         await downloadImmoweltFixtures(runConfig, launchBrowser, closeBrowser);
+        break;
+      case 'willhaben':
+        await downloadWillhabenFixtures(runConfig.url);
+        break;
+      case 'flatfox':
+        await downloadFlatfoxFixtures(runConfig.url);
         break;
       default:
         await downloadHtmlProvider(name, runConfig, launchBrowser, closeBrowser, puppeteerExtractor);

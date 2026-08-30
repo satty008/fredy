@@ -37,6 +37,10 @@ export const NEUTRAL = {
   priceFactor: null,
   afford: null,
   commute: null,
+  down: null,
+  fiber: null,
+  mtech: null,
+  mop: null,
   hidden: false,
 };
 
@@ -60,9 +64,22 @@ export const FILTER_KEYS = [
   'priceFactor',
   'afford',
   'commute',
+  'down',
+  'fiber',
+  'mtech',
   'provider',
   'job',
 ];
+
+/**
+ * The mobile operator is not in `FILTER_KEYS` on purpose.
+ *
+ * It cannot filter anything on its own - the query needs a technology to turn the pair into a bit -
+ * so counting it would report two filters where the user set one, and clearing the technology has
+ * to take it along.
+ * @type {string}
+ */
+export const MOBILE_OPERATOR_KEY = 'mop';
 
 /**
  * Normalizes a filter value that may be a single id/verdict or an array of them (aiVerdict,
@@ -151,6 +168,12 @@ export function clearFilter(key) {
   if (key === 'active' || key === 'hidden') {
     return showPatch('all');
   }
+  // The operator rides along with the technology. Leaving it behind would put a value in the URL
+  // that nothing reads and no chip can show, which then quietly reappears the next time somebody
+  // picks a technology.
+  if (key === 'mtech') {
+    return { mtech: NEUTRAL.mtech, [MOBILE_OPERATOR_KEY]: NEUTRAL[MOBILE_OPERATOR_KEY], page: 1 };
+  }
   return { [key]: NEUTRAL[key], page: 1 };
 }
 
@@ -231,6 +254,18 @@ export function describeActiveFilters(values, { t, jobs = [], providers = [] }) 
         : t('listings.filterCommuteOption', {
             mode: t(`travelTime.mode.${parsed.mode}`),
             minutes: parsed.maxMinutes,
+          });
+    },
+    down: () => t('listings.filterDownstreamOption', { mbit: values.down }),
+    fiber: () => t('listings.filterFiberOnly'),
+    mtech: () => {
+      const technology = t(`connectivity.tech.${values.mtech}`);
+      const operator = values[MOBILE_OPERATOR_KEY];
+      return operator == null
+        ? technology
+        : t('listings.filterMobileWithOperator', {
+            technology,
+            operator: t(`connectivity.operator.${operator}`),
           });
     },
     provider: () =>

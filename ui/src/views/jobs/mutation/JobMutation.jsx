@@ -16,7 +16,7 @@ import Headline from '../../../components/headline/Headline';
 import { useActions, useSelector } from '../../../services/state/store';
 import { xhrPost, errorMessage } from '../../../services/xhr';
 import { useNavigate, useParams, useLocation } from 'react-router';
-import { Input, Switch, Button, TagInput, Toast, Select, Banner, Collapse, Tooltip } from '@douyinfe/semi-ui-19';
+import { Input, Switch, Button, TagInput, Toast, Select, Banner, Collapse } from '@douyinfe/semi-ui-19';
 import './JobMutation.less';
 import { SegmentPart } from '../../../components/segment/SegmentPart';
 import { loadDraft, saveDraft, clearDraft } from '../../../services/jobs/jobDraft.js';
@@ -68,9 +68,9 @@ export default function JobMutator() {
   const defaultBlacklist = sourceJob?.blacklist || [];
   const defaultName = jobToClone ? `Copy of - ${sourceJob?.name}` : sourceJob?.name || null;
   const defaultProviderData = sourceJob?.provider || [];
-  // The job stores references; a read hands back the hydrated adapter shape carrying the channel
-  // id. The table renders the channel DTO, so the ids are resolved against the loaded channel list
-  // - which arrives asynchronously, hence the effect below rather than a plain initial value.
+  // The job stores references, and a read hands back the hydrated adapter shape carrying the
+  // channel id. Ids are what this form keeps: they are here at mount like every other default
+  // below, whereas the channel records they name are fetched separately and arrive later.
   const sourceChannelIds = (sourceJob?.notificationAdapter || [])
     .map((adapter) => adapter.configuredAdapterId)
     .filter(Boolean);
@@ -90,7 +90,7 @@ export default function JobMutator() {
   const [providerData, setProviderData] = useState(defaultProviderData);
   const [name, setName] = useState(defaultName);
   const [blacklist, setBlacklist] = useState(defaultBlacklist);
-  const [selectedChannels, setSelectedChannels] = useState([]);
+  const [selectedChannelIds, setSelectedChannelIds] = useState(sourceChannelIds);
   const [shareWithUsers, setShareWithUsers] = useState(defaultShareWithUsers);
   const [enabled, setEnabled] = useState(defaultEnabled);
   const [spatialFilter, setSpatialFilter] = useState(defaultSpatialFilter);
@@ -99,6 +99,16 @@ export default function JobMutator() {
   const [dealType, setDealType] = useState(defaultDealType);
   /** Whether the value in the deal type field was guessed rather than chosen. */
   const [dealTypeWasInferred, setDealTypeWasInferred] = useState(false);
+
+  // Derived on every render rather than kept alongside the ids. A second copy of the selection in
+  // state is a copy that has to be resolved once the channels load and then kept in step, and the
+  // effect that did that used to put a removed channel straight back: it saw an empty selection,
+  // could not tell "the user just removed the last one" from "not resolved yet", and refilled it.
+  // An id nothing answers to falls out here - its channel was deleted, or is no longer shared with
+  // this user - so what is saved below is always what the table showed.
+  const selectedChannels = selectedChannelIds
+    .map((id) => allChannels.find((channel) => channel.id === id))
+    .filter(Boolean);
   const navigate = useNavigate();
   const actions = useActions();
 
@@ -133,7 +143,7 @@ export default function JobMutator() {
     if (draft.name !== undefined) setName(draft.name);
     if (draft.dealType !== undefined) setDealType(draft.dealType);
     if (draft.providerData !== undefined) setProviderData(draft.providerData);
-    if (draft.selectedChannels !== undefined) setSelectedChannels(draft.selectedChannels);
+    if (draft.selectedChannelIds !== undefined) setSelectedChannelIds(draft.selectedChannelIds);
     if (draft.blacklist !== undefined) setBlacklist(draft.blacklist);
     if (draft.shareWithUsers !== undefined) setShareWithUsers(draft.shareWithUsers);
     if (draft.enabled !== undefined) setEnabled(draft.enabled);
@@ -151,7 +161,7 @@ export default function JobMutator() {
       name,
       dealType,
       providerData,
-      selectedChannels,
+      selectedChannelIds,
       blacklist,
       shareWithUsers,
       enabled,
@@ -164,7 +174,7 @@ export default function JobMutator() {
     name,
     dealType,
     providerData,
-    selectedChannels,
+    selectedChannelIds,
     blacklist,
     shareWithUsers,
     enabled,
@@ -199,7 +209,7 @@ export default function JobMutator() {
     setName(defaultName);
     setDealType(defaultDealType);
     setProviderData(defaultProviderData);
-    setSelectedChannels([]);
+    setSelectedChannelIds(sourceChannelIds);
     setBlacklist(defaultBlacklist);
     setShareWithUsers(defaultShareWithUsers);
     setEnabled(defaultEnabled);
@@ -212,16 +222,6 @@ export default function JobMutator() {
     clearDraft(draftId);
     navigate('/jobs');
   };
-
-  // Resolve the job's stored channel ids once the channel list has loaded. Guarded on the state
-  // still being empty so that a later refresh of the list cannot undo the user's edits.
-  useEffect(() => {
-    if (allChannels.length === 0 || sourceChannelIds.length === 0) return;
-    setSelectedChannels((current) => {
-      if (current.length > 0) return current;
-      return sourceChannelIds.map((id) => allChannels.find((channel) => channel.id === id)).filter(Boolean);
-    });
-  }, [allChannels, sourceChannelIds]);
 
   const handleSpecFilterChange = (key, value) => {
     if (!SPEC_FILTERS.map(({ key }) => key).includes(key)) return;
@@ -289,9 +289,9 @@ export default function JobMutator() {
 
       <NotificationChannelPicker
         visible={pickerVisible}
-        selectedIds={selectedChannels.map((channel) => channel.id)}
+        selectedIds={selectedChannelIds}
         onClose={() => setPickerVisible(false)}
-        onPick={(channel) => setSelectedChannels((current) => [...current, channel])}
+        onPick={(channel) => setSelectedChannelIds((current) => [...current, channel.id])}
         onManageChannels={() => leaveWithReturnPath('/settings/notifications')}
       />
 
@@ -305,10 +305,10 @@ export default function JobMutator() {
           warnUsageAbove={2}
           onClose={() => setChannelEditor(null)}
           onSaved={(saved) =>
-            setSelectedChannels((current) =>
+            setSelectedChannelIds((current) =>
               // A "Duplicate instead" from the editor returns a different channel, so the job is
               // repointed at the copy and the original is left alone for the jobs still using it.
-              current.map((channel) => (channel.id === channelEditor.channelId ? saved : channel)),
+              current.map((id) => (id === channelEditor.channelId ? saved.id : id)),
             )
           }
         />
@@ -450,9 +450,7 @@ export default function JobMutator() {
             }}
             onEdit={(channel) => setChannelEditor({ mode: 'edit', channelId: channel.id })}
             onClone={(channel) => setChannelEditor({ mode: 'clone', channelId: channel.id })}
-            onDetach={(channel) =>
-              setSelectedChannels((current) => current.filter((selected) => selected.id !== channel.id))
-            }
+            onDetach={(channel) => setSelectedChannelIds((current) => current.filter((id) => id !== channel.id))}
           />
         </SegmentPart>
 
@@ -531,7 +529,11 @@ export default function JobMutator() {
                 <li>{t('jobs.mutation.areaStep3')}</li>
               </ol>
               <div className={`jobMutation__areaMap${areaExpanded ? ' jobMutation__areaMap--expanded' : ''}`}>
-                <AreaFilter spatialFilter={spatialFilter} onChange={handleSpatialFilterChange} />
+                <AreaFilter
+                  spatialFilter={spatialFilter}
+                  onChange={handleSpatialFilterChange}
+                  providerData={providerData}
+                />
               </div>
               <Button theme="borderless" size="small" onClick={() => setAreaExpanded((current) => !current)}>
                 {areaExpanded ? t('jobs.mutation.areaCollapse') : t('jobs.mutation.areaExpand')}
@@ -585,30 +587,9 @@ export default function JobMutator() {
             <Button type="tertiary" onClick={leaveForm}>
               {t('jobs.mutation.cancel')}
             </Button>
-            {/* What is still missing is on the button itself rather than printed above it: a
-                disabled Save with no reason sends people hunting through the sections, but a
-                standing list of complaints makes an unfinished form look like a broken one. */}
-            <Tooltip
-              content={
-                missing.length === 0 ? null : (
-                  <ul className="jobMutation__missingTooltip">
-                    {missing.map((requirement) => (
-                      <li key={requirement.key}>{t(requirement.labelKey)}</li>
-                    ))}
-                  </ul>
-                )
-              }
-              position="top"
-              trigger={missing.length === 0 ? 'custom' : 'hover'}
-            >
-              {/* Semi does not fire hover events on a disabled button, so the tooltip needs a
-                  wrapper that is not disabled to hang from. */}
-              <span>
-                <Button type="primary" icon={<IconPlusCircle />} disabled={missing.length > 0} onClick={mutateJob}>
-                  {t('jobs.mutation.save')}
-                </Button>
-              </span>
-            </Tooltip>
+            <Button type="primary" icon={<IconPlusCircle />} disabled={missing.length > 0} onClick={mutateJob}>
+              {t('jobs.mutation.save')}
+            </Button>
           </div>
         </div>
       </form>
