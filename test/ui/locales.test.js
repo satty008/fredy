@@ -102,6 +102,15 @@ const UNTRANSLATED_BACKLOG = {
     'aiRating.resetToDefault',
     'aiRating.settingsSaved',
     'aiRating.instructionsReset',
+    'listings.selectionBannerRateWithOwnAi',
+    'listings.toastOwnAiRatingDone',
+    'listings.toastOwnAiRatingPartial',
+    'listings.toastOwnAiRatingError',
+    'listings.rateWithOwnAiNotConfigured',
+    'listings.rateWithOwnAiTooMany',
+    'listing.detail.rateWithOwnAi',
+    'listing.detail.rateWithOwnAiNotConfigured',
+    'listing.detail.toastOwnAiRated',
   ],
 };
 

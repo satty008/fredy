@@ -142,6 +142,9 @@ export default function ListingDetail() {
   const listing = useSelector((state) => state.listingsData.currentListing);
   const userSettings = useSelector((state) => state.userSettings.settings);
   const connectivityEnabled = useSelector((state) => state.generalSettings.settings?.connectivityEnabled === true);
+  const currentUser = useSelector((state) => state.user.currentUser);
+  const isAdmin = currentUser?.isAdmin === true;
+  const ratingSettings = useSelector((state) => state.ratingSettings);
   const homeAddresses = useMemo(() => getAddresses(userSettings), [userSettings]);
   const listingDeletionPref = userSettings?.listing_deletion_preference;
   const defaultDeleteType = listingDeletionPref?.hardDelete ? 'hard' : 'soft';
@@ -156,6 +159,7 @@ export default function ListingDetail() {
   const [notesSaving, setNotesSaving] = useState(false);
   const [ratingInFlight, setRatingInFlight] = useState(false);
   const [ratingModel, setRatingModel] = useState(DEFAULT_RATING_MODEL);
+  const [ownAiRatingInFlight, setOwnAiRatingInFlight] = useState(false);
   const [priceHistory, setPriceHistory] = useState([]);
   // Set while the user is placing the listing by hand: carries the address text they typed, waiting
   // for the coordinates the map is about to give it.
@@ -196,6 +200,12 @@ export default function ListingDetail() {
     }
     fetchListing();
   }, [listingId]);
+
+  // Whether "Rate with my AI" has a provider to call is only known once this answers - needed
+  // here (not just on the Settings page) since the button lives on every listing, not just this one.
+  useEffect(() => {
+    actions.ratingSettings.getRatingSettings();
+  }, [actions]);
 
   useEffect(() => {
     setNotesDraft(listing?.notes ?? '');
@@ -389,6 +399,25 @@ export default function ListingDetail() {
       }
     } finally {
       setRatingInFlight(false);
+    }
+  };
+
+  const handleRateWithOwnAi = async () => {
+    if (!listing) return;
+    setOwnAiRatingInFlight(true);
+    try {
+      const response = await xhrPost('/api/listings/rate-with-own-ai', { listingIds: [listing.id] });
+      const result = response.json.results[0];
+      if (result?.status === 'rated') {
+        Toast.success(t('listing.detail.toastOwnAiRated', { verdict: result.verdict }));
+        await actions.listingsData.getListing(listingId);
+      } else {
+        Toast.error(result?.message || t('listings.toastOwnAiRatingError'));
+      }
+    } catch (e) {
+      Toast.error(errorMessage(e, t('listings.toastOwnAiRatingError')));
+    } finally {
+      setOwnAiRatingInFlight(false);
     }
   };
 
@@ -761,22 +790,39 @@ export default function ListingDetail() {
                 >
                   {t('listing.detail.storeNotes')}
                 </Button>
-                <Select
-                  size="small"
-                  value={ratingModel}
-                  onChange={(val) => setRatingModel(val)}
-                  disabled={ratingInFlight}
-                  style={{ minWidth: 130 }}
-                >
-                  {RATING_MODELS.map((model) => (
-                    <Select.Option key={model.value} value={model.value}>
-                      {model.label}
-                    </Select.Option>
-                  ))}
-                </Select>
-                <Button loading={ratingInFlight} disabled={ratingInFlight} onClick={handleRateWithAI}>
-                  {t('listing.detail.rateWithAi')}
-                </Button>
+                {isAdmin && (
+                  <>
+                    <Select
+                      size="small"
+                      value={ratingModel}
+                      onChange={(val) => setRatingModel(val)}
+                      disabled={ratingInFlight}
+                      style={{ minWidth: 130 }}
+                    >
+                      {RATING_MODELS.map((model) => (
+                        <Select.Option key={model.value} value={model.value}>
+                          {model.label}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                    <Button loading={ratingInFlight} disabled={ratingInFlight} onClick={handleRateWithAI}>
+                      {t('listing.detail.rateWithAi')}
+                    </Button>
+                  </>
+                )}
+                {!ratingSettings.configured ? (
+                  <Tooltip content={t('listing.detail.rateWithOwnAiNotConfigured')}>
+                    {/* Wrapped in a span: a disabled Button swallows the events the Tooltip
+                        listens for, so the explanation for why it's greyed out would never appear. */}
+                    <span>
+                      <Button disabled>{t('listing.detail.rateWithOwnAi')}</Button>
+                    </span>
+                  </Tooltip>
+                ) : (
+                  <Button loading={ownAiRatingInFlight} disabled={ownAiRatingInFlight} onClick={handleRateWithOwnAi}>
+                    {t('listing.detail.rateWithOwnAi')}
+                  </Button>
+                )}
               </Space>
             </div>
 

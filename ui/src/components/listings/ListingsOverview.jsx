@@ -66,6 +66,9 @@ const RATING_MODELS = [
 ];
 const DEFAULT_RATING_MODEL = 'claude-sonnet-5';
 
+/** Kept in sync by hand with MAX_LISTINGS_PER_RATE_REQUEST in lib/api/routes/listingsRouter.js. */
+const MAX_LISTINGS_PER_RATE_REQUEST = 25;
+
 /**
  * Every filter this page keeps in the URL, with its default and its codec.
  *
@@ -131,6 +134,9 @@ const ListingsOverview = () => {
   const jobs = useSelector((state) => state.jobsData.jobs);
   const userSettings = useSelector((state) => state.userSettings.settings);
   const generalSettings = useSelector((state) => state.generalSettings.settings);
+  const currentUser = useSelector((state) => state.user.currentUser);
+  const isAdmin = currentUser?.isAdmin === true;
+  const ratingSettings = useSelector((state) => state.ratingSettings);
   const actions = useActions();
   const navigate = useNavigate();
   const sp = useSearchParams();
@@ -177,6 +183,7 @@ const ListingsOverview = () => {
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [ratingInFlight, setRatingInFlight] = useState(false);
   const [ratingModel, setRatingModel] = useState(DEFAULT_RATING_MODEL);
+  const [ownAiRatingInFlight, setOwnAiRatingInFlight] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const isHiddenView = hiddenOnly === true;
@@ -267,6 +274,11 @@ const ListingsOverview = () => {
   useEffect(() => {
     loadDataRef.current = loadData;
   }, [loadData]);
+
+  // Whether "Rate with my AI" has a provider to call is only known once this answers.
+  useEffect(() => {
+    actions.ratingSettings.getRatingSettings();
+  }, [actions]);
 
   // SSE connection for live listings updates
   useEffect(() => {
@@ -411,6 +423,28 @@ const ListingsOverview = () => {
       }
     } finally {
       setRatingInFlight(false);
+    }
+  };
+
+  const handleRateSelectedWithOwnAi = async () => {
+    const listingIds = Array.from(selectedIds);
+    if (listingIds.length === 0) return;
+    setOwnAiRatingInFlight(true);
+    try {
+      const response = await xhrPost('/api/listings/rate-with-own-ai', { listingIds });
+      const rated = response.json.results.filter((r) => r.status === 'rated').length;
+      const failed = response.json.results.length - rated;
+      if (failed === 0) {
+        Toast.success(t('listings.toastOwnAiRatingDone', { count: rated }));
+      } else {
+        Toast.warning(t('listings.toastOwnAiRatingPartial', { rated, failed }));
+      }
+      setSelectedIds(new Set());
+      loadData();
+    } catch (error) {
+      Toast.error(errorMessage(error, t('listings.toastOwnAiRatingError')));
+    } finally {
+      setOwnAiRatingInFlight(false);
     }
   };
 
@@ -587,24 +621,66 @@ const ListingsOverview = () => {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
               <span>{t('listings.selectionBannerCount', { count: selectedIds.size })}</span>
               <div style={{ display: 'flex', gap: 8, marginLeft: 16 }}>
-                <Select
+                {isAdmin && (
+                  <>
+                    <Select
+                      size="small"
+                      value={ratingModel}
+                      onChange={(val) => setRatingModel(val)}
+                      disabled={ratingInFlight}
+                      style={{ minWidth: 130 }}
+                    >
+                      {RATING_MODELS.map((model) => (
+                        <Select.Option key={model.value} value={model.value}>
+                          {model.label}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                    <Button
+                      size="small"
+                      theme="solid"
+                      type="primary"
+                      loading={ratingInFlight}
+                      onClick={handleRateSelected}
+                    >
+                      {t('listings.selectionBannerRate')}
+                    </Button>
+                  </>
+                )}
+                {(() => {
+                  const tooManySelected = selectedIds.size > MAX_LISTINGS_PER_RATE_REQUEST;
+                  const ownAiTooltip = !ratingSettings.configured
+                    ? t('listings.rateWithOwnAiNotConfigured')
+                    : tooManySelected
+                      ? t('listings.rateWithOwnAiTooMany', { max: MAX_LISTINGS_PER_RATE_REQUEST })
+                      : null;
+                  const ownAiButton = (
+                    <Button
+                      size="small"
+                      theme="solid"
+                      loading={ownAiRatingInFlight}
+                      disabled={ownAiRatingInFlight || !ratingSettings.configured || tooManySelected}
+                      onClick={handleRateSelectedWithOwnAi}
+                    >
+                      {t('listings.selectionBannerRateWithOwnAi')}
+                    </Button>
+                  );
+                  // Wrapped in a span: a disabled Button swallows the events the Tooltip listens
+                  // for, so the explanation for why it's greyed out would never appear.
+                  return ownAiTooltip ? (
+                    <Tooltip content={ownAiTooltip}>
+                      <span>{ownAiButton}</span>
+                    </Tooltip>
+                  ) : (
+                    ownAiButton
+                  );
+                })()}
+                <Button
                   size="small"
-                  value={ratingModel}
-                  onChange={(val) => setRatingModel(val)}
-                  disabled={ratingInFlight}
-                  style={{ minWidth: 130 }}
+                  onClick={() => setSelectedIds(new Set())}
+                  disabled={ratingInFlight || ownAiRatingInFlight}
                 >
-                  {RATING_MODELS.map((model) => (
-                    <Select.Option key={model.value} value={model.value}>
-                      {model.label}
-                    </Select.Option>
-                  ))}
-                </Select>
-                <Button size="small" onClick={() => setSelectedIds(new Set())} disabled={ratingInFlight}>
                   {t('listings.selectionBannerClear')}
-                </Button>
-                <Button size="small" theme="solid" type="primary" loading={ratingInFlight} onClick={handleRateSelected}>
-                  {t('listings.selectionBannerRate')}
                 </Button>
               </div>
             </div>
