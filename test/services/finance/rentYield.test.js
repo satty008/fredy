@@ -9,6 +9,7 @@ import os from 'os';
 import path from 'path';
 
 let rentPerSqmFor;
+let rentDataMatchFor;
 let grossYieldPercent;
 let targetRentFor;
 let bundeslandFor;
@@ -36,6 +37,7 @@ beforeEach(async () => {
   vi.resetModules();
   ({
     rentPerSqmFor,
+    rentDataMatchFor,
     grossYieldPercent,
     targetRentFor,
     bundeslandFor,
@@ -124,6 +126,49 @@ describe('grossYieldPercent', () => {
     // 650 EUR/month * 12 = 7800 annual rent; / 200000 price * 100 = 3.9%
     const result = grossYieldPercent({ price: 200000, size: 60, address: 'Münster', cold_rent_override: 650 });
     expect(result).toBeCloseTo(3.9, 5);
+  });
+});
+
+describe('rentDataMatchFor', () => {
+  it('reports "area" coverage for a district-level match', () => {
+    expect(rentDataMatchFor({ address: 'Musterweg 3, Leipzig-Connewitz' })).toEqual({
+      rentPerSqm: 12.5,
+      coverage: 'area',
+    });
+  });
+
+  it('reports "city" coverage for a city-level match with no area match', () => {
+    expect(rentDataMatchFor({ address: 'Musterstraße 1, 48143 Münster' })).toEqual({
+      rentPerSqm: 12,
+      coverage: 'city',
+    });
+  });
+
+  it('reports "default" coverage when no city matches at all', () => {
+    expect(rentDataMatchFor({ address: 'Irgendwo 5, 99999 Nirgendwo' })).toEqual({
+      rentPerSqm: 9,
+      coverage: 'default',
+    });
+  });
+
+  it('reports "override" coverage when cold_rent_override is set, even with no city match', () => {
+    expect(rentDataMatchFor({ address: '99999 Nirgendwo', size: 50, cold_rent_override: 500 })).toEqual({
+      rentPerSqm: 10,
+      coverage: 'override',
+    });
+  });
+
+  it('reports "none" coverage when the data file is missing entirely', () => {
+    fs.rmSync(dataFile, { force: true });
+    expect(rentDataMatchFor({ address: 'Musterstraße 1, 48143 Münster' })).toEqual({
+      rentPerSqm: null,
+      coverage: 'none',
+    });
+  });
+
+  it('rentPerSqmFor stays a plain passthrough of the rentPerSqm half', () => {
+    const listing = { address: 'Musterweg 3, Leipzig-Connewitz' };
+    expect(rentPerSqmFor(listing)).toBe(rentDataMatchFor(listing).rentPerSqm);
   });
 });
 

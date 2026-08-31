@@ -3,7 +3,7 @@
  * Licensed under Apache-2.0 with Commons Clause and Attribution/Naming Clause
  */
 
-import { Button, Select, Tag, TextArea } from '@douyinfe/semi-ui-19';
+import { Button, Select, Tag, TextArea, Tooltip } from '@douyinfe/semi-ui-19';
 
 import ImmocockpitVerdictBadge from '../../../components/listings/ImmocockpitVerdictBadge.jsx';
 import PriceFactorBadge from '../../../components/listings/PriceFactorBadge.jsx';
@@ -37,6 +37,11 @@ import './ListingWorkspace.less';
  * @param {string} [props.ratingModel]
  * @param {{ value: string, label: string }[]} [props.ratingModels]
  * @param {(value: string) => void} [props.onRatingModelChange]
+ * @param {boolean} [props.isAdmin] - Whether the agentic "Rate with AI" controls are offered; the
+ *   server only lets admins run it.
+ * @param {boolean} [props.ownAiConfigured] - Whether the user has a provider for "Rate with my AI".
+ * @param {() => void} [props.onRateWithOwnAi]
+ * @param {boolean} [props.ownAiRatingInFlight]
  * @returns {React.ReactElement}
  */
 export default function ListingWorkspace({
@@ -56,6 +61,10 @@ export default function ListingWorkspace({
   ratingModel,
   ratingModels = [],
   onRatingModelChange,
+  isAdmin = false,
+  ownAiConfigured = false,
+  onRateWithOwnAi,
+  ownAiRatingInFlight = false,
 }) {
   const t = useTranslation();
 
@@ -113,7 +122,7 @@ export default function ListingWorkspace({
         >
           {t('listing.detail.storeNotes')}
         </Button>
-        {onRateWithAi && ratingModels.length > 0 && (
+        {isAdmin && onRateWithAi && ratingModels.length > 0 && (
           <Select
             size="small"
             value={ratingModel}
@@ -128,11 +137,25 @@ export default function ListingWorkspace({
             ))}
           </Select>
         )}
-        {onRateWithAi && (
+        {isAdmin && onRateWithAi && (
           <Button loading={ratingInFlight} disabled={ratingInFlight} onClick={onRateWithAi}>
             {t('listing.detail.rateWithAi')}
           </Button>
         )}
+        {onRateWithOwnAi &&
+          (ownAiConfigured ? (
+            <Button loading={ownAiRatingInFlight} disabled={ownAiRatingInFlight} onClick={onRateWithOwnAi}>
+              {t('listing.detail.rateWithOwnAi')}
+            </Button>
+          ) : (
+            <Tooltip content={t('listing.detail.rateWithOwnAiNotConfigured')}>
+              {/* Wrapped in a span: a disabled Button swallows the events the Tooltip listens for, so
+                  the explanation for why it's greyed out would never appear. */}
+              <span>
+                <Button disabled>{t('listing.detail.rateWithOwnAi')}</Button>
+              </span>
+            </Tooltip>
+          ))}
       </div>
     </section>
   );

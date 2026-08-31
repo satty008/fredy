@@ -4,6 +4,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import { rateListingWithOwnAi } from '../../../lib/services/ai/plainRater.js';
 
 const LISTING = {
@@ -199,5 +202,62 @@ describe('rateListingWithOwnAi', () => {
         'not valid JSON',
       );
     });
+  });
+});
+
+describe('rent data coverage flagging', () => {
+  let dataFile;
+  let rateListingWithOwnAiFresh;
+
+  beforeEach(async () => {
+    dataFile = path.join(os.tmpdir(), `rent-data-${Date.now()}-${Math.random()}.json`);
+    fs.writeFileSync(
+      dataFile,
+      JSON.stringify({
+        defaultRentPerSqm: 9,
+        cities: { münster: { default: 11, areas: { altstadt: 13 } } },
+      }),
+    );
+    process.env.RENT_DATA_PATH = dataFile;
+    // Both rentYield.js and plainRater.js are re-imported fresh so the module-level
+    // RENT_DATA_PATH constant picks up this test's file, same as rentYield.test.js.
+    vi.resetModules();
+    ({ rateListingWithOwnAi: rateListingWithOwnAiFresh } = await import('../../../lib/services/ai/plainRater.js'));
+    fetchMock = vi.fn();
+    global.fetch = fetchMock;
+  });
+
+  afterEach(() => {
+    fs.rmSync(dataFile, { force: true });
+    delete process.env.RENT_DATA_PATH;
+  });
+
+  const promptTextFor = async (listing) => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ content: [{ type: 'tool_use', name: 'submit_rating', input: RATING }] }),
+    });
+    await rateListingWithOwnAiFresh({ listing, adapter: ANTHROPIC_ADAPTER });
+    return JSON.parse(fetchMock.mock.calls[0][1].body).messages[0].content[0].text;
+  };
+
+  it('flags a district-level match as real local data', async () => {
+    const text = await promptTextFor({ ...LISTING, address: 'Musterweg 1, Münster-Altstadt' });
+    expect(text).toContain('Rent data coverage: area match (real local data)');
+  });
+
+  it('flags a city-level match as real local data', async () => {
+    const text = await promptTextFor({ ...LISTING, address: '48143 Münster' });
+    expect(text).toContain('Rent data coverage: city match (real local data)');
+  });
+
+  it('flags a listing with no city match as using the nationwide fallback average', async () => {
+    const text = await promptTextFor({ ...LISTING, address: '99999 Nirgendwo' });
+    expect(text).toContain('Rent data coverage: nationwide fallback average (not specific to this location)');
+  });
+
+  it('flags a manual cold-rent override as trusted, not a fallback', async () => {
+    const text = await promptTextFor({ ...LISTING, address: '99999 Nirgendwo', cold_rent_override: 600 });
+    expect(text).toContain('Rent data coverage: manual override');
   });
 });

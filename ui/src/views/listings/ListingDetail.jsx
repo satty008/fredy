@@ -139,6 +139,9 @@ export default function ListingDetail() {
   const connectivityEnabled = useSelector((state) => state.generalSettings.settings?.connectivityEnabled === true);
   const pois = useSelector((state) => state.tracking.pois);
   const savedAddresses = useMemo(() => getAddresses(userSettings), [userSettings]);
+  const currentUser = useSelector((state) => state.user.currentUser);
+  const isAdmin = currentUser?.isAdmin === true;
+  const ratingSettings = useSelector((state) => state.ratingSettings);
   const listingDeletionPref = userSettings?.listing_deletion_preference;
   const defaultDeleteType = listingDeletionPref?.hardDelete ? 'hard' : 'soft';
   // The listing does name a provider, but the pin can be dragged anywhere the user's own searches
@@ -154,6 +157,7 @@ export default function ListingDetail() {
   const [applicationVisible, setApplicationVisible] = useState(false);
   const [notesDraft, setNotesDraft] = useState('');
   const [notesSaving, setNotesSaving] = useState(false);
+  const [ownAiRatingInFlight, setOwnAiRatingInFlight] = useState(false);
   const [priceHistory, setPriceHistory] = useState([]);
   // Set while the user is placing the listing by hand: carries the address text they typed, waiting
   // for the coordinates the map is about to give it.
@@ -218,6 +222,12 @@ export default function ListingDetail() {
     }
     fetchListing();
   }, [listingId]);
+
+  // Whether "Rate with my AI" has a provider to call is only known once this answers - needed
+  // here (not just on the Settings page) since the button lives on every listing, not just this one.
+  useEffect(() => {
+    actions.ratingSettings.getRatingSettings();
+  }, [actions]);
 
   useEffect(() => {
     setNotesDraft(listing?.notes ?? '');
@@ -430,6 +440,25 @@ export default function ListingDetail() {
       }
     } finally {
       setRatingInFlight(false);
+    }
+  };
+
+  const handleRateWithOwnAi = async () => {
+    if (!listing) return;
+    setOwnAiRatingInFlight(true);
+    try {
+      const response = await xhrPost('/api/listings/rate-with-own-ai', { listingIds: [listing.id] });
+      const result = response.json.results[0];
+      if (result?.status === 'rated') {
+        Toast.success(t('listing.detail.toastOwnAiRated', { verdict: result.verdict }));
+        await actions.listingsData.getListing(listingId);
+      } else {
+        Toast.error(result?.message || t('listings.toastOwnAiRatingError'));
+      }
+    } catch (e) {
+      Toast.error(errorMessage(e, t('listings.toastOwnAiRatingError')));
+    } finally {
+      setOwnAiRatingInFlight(false);
     }
   };
 
@@ -692,6 +721,10 @@ export default function ListingDetail() {
                 ratingModel={ratingModel}
                 ratingModels={RATING_MODELS}
                 onRatingModelChange={setRatingModel}
+                isAdmin={isAdmin}
+                ownAiConfigured={ratingSettings.configured === true}
+                onRateWithOwnAi={handleRateWithOwnAi}
+                ownAiRatingInFlight={ownAiRatingInFlight}
               />
             </PhoneCollapse>
           </div>
