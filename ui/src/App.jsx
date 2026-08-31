@@ -12,6 +12,7 @@ import PreferencesPage from './views/settings/pages/PreferencesPage';
 import TravelTimePage from './views/settings/pages/TravelTimePage';
 import ListingDetailsPage from './views/settings/pages/ListingDetailsPage';
 import NotificationsPage from './views/settings/pages/NotificationsPage';
+import RatingSettingsPage from './views/settings/pages/RatingSettingsPage';
 import ConnectionsPage from './views/settings/pages/ConnectionsPage';
 import AdminLayout from './views/admin/AdminLayout';
 import SystemPage from './views/admin/pages/SystemPage';
@@ -229,6 +230,7 @@ export default function FredyApp() {
                     <Route path="travel-time" element={<TravelTimePage />} />
                     <Route path="listings" element={<ListingDetailsPage />} />
                     <Route path="notifications" element={<NotificationsPage />} />
+                    <Route path="ai-rating" element={<RatingSettingsPage />} />
                     <Route path="connections" element={<ConnectionsPage />} />
                   </Route>
 

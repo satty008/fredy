@@ -233,6 +233,59 @@ export const useFredyState = create(
             await xhrPost(`/api/notificationChannels/${channelId}/try`, {});
           },
         },
+        aiProviders: {
+          async getTypes() {
+            try {
+              const response = await xhrGet('/api/aiProviders/types');
+              set((state) => ({
+                aiProviders: { ...state.aiProviders, types: Object.freeze(response.json) },
+              }));
+            } catch (Exception) {
+              console.error('Error while trying to get resource for api/aiProviders/types. Error:', Exception);
+            }
+          },
+          async getProviders() {
+            try {
+              const response = await xhrGet('/api/aiProviders');
+              set((state) => ({
+                aiProviders: { ...state.aiProviders, providers: [...response.json], loaded: true },
+              }));
+            } catch (Exception) {
+              console.error('Error while trying to get resource for api/aiProviders. Error:', Exception);
+            }
+          },
+          // Not written into the slice, same reasoning as notificationChannels.loadChannel - the
+          // secret only ever reaches someone who may edit this provider, and only for as long as
+          // the editor holding it is open.
+          async loadProvider(providerId) {
+            const response = await xhrGet(`/api/aiProviders/${providerId}`);
+            return response.json;
+          },
+          async saveProvider(payload) {
+            const response = await xhrPost('/api/aiProviders', payload);
+            await effects.aiProviders.getProviders();
+            return response.json;
+          },
+          async removeProvider(providerId) {
+            await xhrDelete(`/api/aiProviders/${providerId}`);
+            await effects.aiProviders.getProviders();
+          },
+        },
+        ratingSettings: {
+          async getRatingSettings() {
+            try {
+              const response = await xhrGet('/api/user/ratingSettings');
+              set(() => ({ ratingSettings: { ...response.json, loaded: true } }));
+            } catch (Exception) {
+              console.error('Error while trying to get resource for api/user/ratingSettings. Error:', Exception);
+            }
+          },
+          async saveRatingSettings(payload) {
+            const response = await xhrPost('/api/user/ratingSettings', payload);
+            set(() => ({ ratingSettings: { ...response.json, loaded: true } }));
+            return response.json;
+          },
+        },
         generalSettings: {
           async getGeneralSettings() {
             try {
@@ -739,6 +792,15 @@ export const useFredyState = create(
         finance: { data: null, loading: false, summary: null },
         notificationAdapter: [],
         notificationChannels: { channels: [], loaded: false },
+        aiProviders: { types: [], providers: [], loaded: false },
+        ratingSettings: {
+          aiAdapterId: null,
+          model: null,
+          instructions: '',
+          isCustomized: false,
+          configured: false,
+          loaded: false,
+        },
         listingsData: {
           totalNumber: 0,
           page: 1,
@@ -769,6 +831,8 @@ export const useFredyState = create(
         finance: { ...effects.finance },
         notificationAdapter: { ...effects.notificationAdapter },
         notificationChannels: { ...effects.notificationChannels },
+        aiProviders: { ...effects.aiProviders },
+        ratingSettings: { ...effects.ratingSettings },
         generalSettings: { ...effects.generalSettings },
         demoMode: { ...effects.demoMode },
         versionUpdate: { ...effects.versionUpdate },
