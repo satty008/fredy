@@ -44,6 +44,7 @@ const TravelTimePage = lazy(() => import('./views/settings/pages/TravelTimePage'
 const ListingDetailsPage = lazy(() => import('./views/settings/pages/ListingDetailsPage'));
 const ApplicationPage = lazy(() => import('./views/settings/pages/ApplicationPage'));
 const NotificationsPage = lazy(() => import('./views/settings/pages/NotificationsPage'));
+const RatingSettingsPage = lazy(() => import('./views/settings/pages/RatingSettingsPage'));
 const ConnectionsPage = lazy(() => import('./views/settings/pages/ConnectionsPage'));
 const AdminLayout = lazy(() => import('./views/admin/AdminLayout'));
 const SystemPage = lazy(() => import('./views/admin/pages/SystemPage'));
@@ -265,6 +266,7 @@ export default function FredyApp() {
                         <Route path="listings" element={<ListingDetailsPage />} />
                         <Route path="application" element={<ApplicationPage />} />
                         <Route path="notifications" element={<NotificationsPage />} />
+                        <Route path="ai-rating" element={<RatingSettingsPage />} />
                         <Route path="connections" element={<ConnectionsPage />} />
                       </Route>
 

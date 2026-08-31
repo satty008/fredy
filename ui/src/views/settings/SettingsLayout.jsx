@@ -35,6 +35,7 @@ export default function SettingsLayout() {
     { path: '/settings/listings', label: t('settings.tabListingDetails') },
     { path: '/settings/application', label: t('settings.tabApplication') },
     { path: '/settings/notifications', label: t('settings.tabNotifications') },
+    { path: '/settings/ai-rating', label: t('settings.tabAiRating') },
     { path: '/settings/connections', label: t('settings.tabConnections') },
   ];
 
