@@ -6,9 +6,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Database from 'better-sqlite3';
 
-import { up } from '../../lib/services/storage/migrations/sql/40.listing-cold-rent-override.js';
+import { up } from '../../lib/services/storage/migrations/sql/42.listing-cold-rent-override.js';
 
-describe('migration 40 - listing cold rent override', () => {
+describe('migration 42 - listing cold rent override', () => {
   let db;
 
   beforeEach(() => {
