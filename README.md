@@ -40,6 +40,10 @@ On top of the listing itself, Fredy answers two questions:
   network, marks every stop and shows the next departures. See [Travel Time](#travel-time) and
   [Public Transport](#public-transport).
 
+<p align="center">
+  <a href="https://trendshift.io/repositories/43464?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-43464" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/43464/daily?language=JavaScript" alt="orangecoding%2Ffredy | Trendshift" width="250" height="55"/></a>
+</p>
+
 ------------------------------------------------------------------------
 
 ## 📖 Contents
@@ -650,7 +654,7 @@ Guide](https://github.com/orangecoding/fredy/blob/master/CONTRIBUTING.md).
 
 ------------------------------------------------------------------------
 
-## 🗺️ Credits & Data
+## 🗺️ Data Attribution & Partners
 
 Timetables, journey planning and travel times come from
 [Transitous](https://transitous.org/), a community-run [MOTIS](https://github.com/motis-project/motis)
@@ -658,6 +662,10 @@ instance. It is free, needs no API key, and is maintained by volunteers, so plea
 with the load you put on it and read [their usage policy](https://transitous.org/api/) before
 pointing a large instance at it. Street and map data come from
 [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors.
+
+Every listing with coordinates links out to [Lagecheck](https://lagecheck.com/), which rates the
+address on noise, air quality, green space and flood risk. Fredy only builds the link and stores
+nothing from it; the underlying data is by [geosci.de](https://geosci.de/).
 
 <a href="https://transitous.org/">
 <picture>
