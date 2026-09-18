@@ -23,6 +23,8 @@ import AiVerdictBadge from '../listings/AiVerdictBadge.jsx';
 import ImmocockpitVerdictBadge from '../listings/ImmocockpitVerdictBadge.jsx';
 import PriceFactorBadge from '../listings/PriceFactorBadge.jsx';
 import PriceChangeBadge from '../listings/PriceChangeBadge.jsx';
+import PricePerSqmBadge from '../listings/PricePerSqmBadge.jsx';
+import ScamBadge from '../listings/ScamBadge.jsx';
 import CommuteBadge from '../transit/CommuteBadge.jsx';
 
 import './ListingsTable.less';
@@ -83,7 +85,8 @@ const ListingsTable = ({
           </div>
 
           <div className="listingsTable__row__title" title={item.title}>
-            {item.title}
+            <ScamBadge listing={item} compact />
+            <span className="listingsTable__row__title-text">{item.title}</span>
           </div>
 
           <div className="listingsTable__row__price">
@@ -97,6 +100,7 @@ const ListingsTable = ({
                     previousPrice={item.previous_price}
                     changedAt={item.price_changed_at}
                   />
+                  <PricePerSqmBadge listing={item} />
                 </div>
                 <AiVerdictBadge verdict={item.ai_verdict} />
                 <ImmocockpitVerdictBadge verdict={item.immocockpitVerdict} analysis={item.immocockpitAnalysis} />
@@ -126,7 +130,12 @@ const ListingsTable = ({
             {item.provider}
           </div>
 
-          <div className="listingsTable__row__date">{timeService.format(item.created_at, false, locale)}</div>
+          {/* The portal's own publication date, falling back to the day Fredy first saw the
+              advert - the same expression the grid renders and the same one the default sort
+              orders by, so the column cannot disagree with the order it is sorted in. */}
+          <div className="listingsTable__row__date">
+            {timeService.format(item.published_at ?? item.created_at, false, locale)}
+          </div>
 
           <div
             className="listingsTable__row__actions"

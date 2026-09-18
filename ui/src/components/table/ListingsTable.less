@@ -75,8 +75,19 @@
       font-size: @text-sm;
       color: @color-text;
       overflow: hidden;
-      text-overflow: ellipsis;
       white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: @space-2;
+
+      .scamBadge {
+        flex: 0 0 auto;
+      }
+    }
+
+    &__title-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     &__price {
@@ -95,6 +106,10 @@
         display: flex;
         align-items: center;
         gap: 4px;
+        // The cell can carry four things at once now. It grows downwards rather than pushing the
+        // columns beside it out of the row.
+        flex-wrap: wrap;
+        row-gap: 2px;
       }
     }
 

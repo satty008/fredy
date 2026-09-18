@@ -30,7 +30,7 @@ yarn test:download-fixtures   # Re-download fresh provider HTML fixtures
 # Single test file
 TEST_MODE=offline npx vitest run test/provider/immoscout.test.js
 
-# Lint / Format
+# Lint / Format (oxlint + oxfmt, from the oxc toolchain)
 yarn lint && yarn lint:fix
 yarn format && yarn format:check
 
@@ -68,7 +68,9 @@ scheduler (every N minutes) or manual trigger via POST /api/jobs/:id/run
 ### Plugin systems
 
 **Providers** (`lib/provider/*.js`) - each module exports:
-- `metaInformation` - `{ id, name, baseUrl }`, plus an optional `countries` (ISO 3166-1 alpha-2,
+- `metaInformation` - `{ id, name, baseUrl }`, plus an optional `hosts` (every domain the portal
+  serves the same application under, defaulting to `baseUrl`'s host; read by the job form's url
+  check in `ui/src/services/jobs/providerUrl.js`) and an optional `countries` (ISO 3166-1 alpha-2,
   lowercase). Absent means `['de']`, which is why no shipped provider declares it and why adding the
   field changed no existing installation. Resolved in `lib/services/providers/`: `countries.js` is
   the pure half (the default, normalisation, union) and is all the Nominatim client imports, since
@@ -111,6 +113,33 @@ An adapter *configuration* is separate from the adapter itself: it is a row in `
 | SqliteConnection | `lib/services/storage/SqliteConnection.js` | Singleton, WAL mode; `execute()`, `query()`, `withTransaction()` |
 | Migrations | `lib/services/storage/migrations/` | Numbered JS files each exporting `up(db)`; checksum-tracked in `schema_migrations` |
 | Extractor | `lib/services/extractor/` | Orchestrates Puppeteer + Cheerio; shared browser instance per job |
+| Listing documents | `lib/services/storage/listingAttachmentsStorage.js` | Uploaded exposés (`listing_attachments`), bytes and all. Type and filename guards in `lib/services/listings/attachmentTypes.js`; routes in `lib/api/routes/listingAttachmentsRouter.js` |
+
+### Uploaded documents live in the database
+
+The exposé a user attaches to a listing is a BLOB in `listing_attachments`, not a file next to
+`listings.db`. Fredy usually runs in a container whose filesystem is discarded, and the only thing
+users are told to persist is the `/db` volume, so the database is the one place uploaded bytes are
+already safe. Three things follow from that for free, and all three would otherwise be code:
+
+- Backups already carry them, because `backupRestoreService` copies the whole database.
+- `foreign_keys = ON` plus `ON DELETE CASCADE` disposes of them exactly when the listing goes -
+  retention purge, deleted job, manual hard delete, all of them, none of which know this table
+  exists. Files would need an unlink in each of those paths plus a sweeper for the ones missed.
+- There is no filename that can escape anywhere, because no filename ever reaches a filesystem.
+
+The one thing that is *not* free is the size, hence the two admin settings
+(`listingAttachmentMaxMb`, `listingAttachmentMaxPerListing`) and the rule that nothing reading
+attachment metadata may `SELECT *`.
+
+Uploading also exempts a listing from `purgeExpiredInactiveListings`, alongside the watch list.
+Preserving a record of an ad that has been taken down is the point of the feature, so deleting it on
+a timer would delete exactly what the upload was for.
+
+The type stored on a row comes from the file's magic bytes, never from the `Content-Type` the
+browser sent, because these files are served back from Fredy's own origin: a renamed `.html`
+getting through would be stored cross-site scripting. Responses carry `nosniff`, and only images
+go out `inline`.
 
 ### Frontend
 
@@ -199,12 +228,17 @@ Two transports:
 1. **stdio** (`lib/mcp/stdio.js`) - for Claude Desktop/LM Studio; opens its own DB connection (main process need not be running)
 2. **HTTP** (`/api/mcp`) - authenticated via Bearer token (`mcp_token` column in `users` table)
 
-Tools: `list_jobs`, `get_job`, `list_listings`, `get_listing`, `get_current_date_time`. Responses are Markdown via `lib/mcp/mcpNormalizer.js`.
+Read tools: `list_jobs`, `get_job`, `list_listings`, `get_listing`, `get_photo_for_listing`, `calculate_financing`, `get_current_date_time`.
+Write tools: `add_listing_note`, `set_listing_notes`, `watch_listing`, `unwatch_listing`, and the four that create a job.
+Responses are Markdown via `lib/mcp/mcpNormalizer.js`.
+
+Job creation is a draft-based interview, not a single call: `lib/mcp/jobDraftStore.js` holds the state (in memory, per user, 30 min) and computes the next question; `lib/mcp/jobDraftContext.js` is the only part that reads the database and is what strips channel secrets. Write tools go through `authenticateWriteToolCall`, which also enforces the `mcp:write` OAuth scope and refuses non-admins while demo mode is on.
 
 ## Key Conventions
 
 - **ESM only** - `import`/`export` everywhere, no CommonJS
 - **JSDoc typedefs** (no TypeScript) in `lib/types/` - `listing.js`, `job.js`, `filter.js`, `providerConfig.js`
+- **Lint / format** - oxlint (`.oxlintrc.json`) and oxfmt (`.oxfmtrc.json`), both from the oxc toolchain. There is no ESLint and no Prettier; `eslint-disable` comments still work because oxlint reads them
 - **Copyright header** required on all `.js` files - enforced by `lint-staged` pre-commit hook via `copyright.js`
 - **`NoNewListingsWarning`** (`lib/errors.js`) is used as control flow to short-circuit the pipeline (not an error)
 - **Test fixtures** in `test/testFixtures/` - HTML/JSON snapshots per provider; `TEST_MODE=offline` mocks `puppeteerExtractor` and global `fetch` via `test/offlineFixtures.js`
@@ -216,45 +250,3 @@ Tools: `list_jobs`, `get_job`, `list_listings`, `get_listing`, `get_current_date
 - New features must be tested
 - New features must be properly documented with JsDoc
 - You do **not** commit any changes, you do **not** create a new branch unless I told you so
-
-<!-- graft:start -->
-## Graft — repo context graph
-
-This repo is indexed in `graft/`: small linked markdown nodes that explain each
-system and carry exact file:line spans, kept in sync with the code through git.
-
-For ANY task here — understanding how something works, finding where code lives,
-or scoping a change — get context from the graph before grepping or opening
-source files. Re-ask freely (it's cheap) and reuse literal identifiers you
-already have (symbol, error string, file name) as the query. New to this repo?
-Run `graft map` first — a token-budgeted orientation (dir clusters, hubs,
-hotspots), no LLM, no key.
-
-- Run `graft ask "<your question>" --source` → ranked nodes with the relevant
-  code spans inlined (each hit's ≤8-line crux by default; `--full` for whole
-  definitions when the crux isn't enough). Match the tool to the task shape:
-  for understanding or editing, the top node IS the answer — cite its
-  `covers:` file:line spans and edit straight from `--source`. For
-  exhaustive tasks ("every occurrence / every caller of this pattern"), ranked
-  results are top-N, not complete — run `graft grep "<literal>"` instead
-  (exhaustive over indexed files, grouped by enclosing symbol), falling back
-  to raw `grep -rn` only for unindexed files.
-- `graft skeleton <file>` → every definition's signature + span, ~10× cheaper
-  than reading the file; use it to skim an API surface.
-- `graft callers <symbol>` gives precomputed, exact edges — who calls this.
-  Add `--direction out` for what it calls, or `--depth N` to walk
-  transitively for the full blast radius. For structural questions, skip
-  ranking and use this directly.
-- Or browse: `graft/INDEX.md` lists every node; follow the links.
-- Monorepos and folders of multiple repos rank fairly across sub-projects —
-  hits carry `[scope/]` labels naming which one they're from. Narrow with
-  `graft ask "<task>" --in <scope>/` once you know where you're working.
-
-If a returned span is truncated ("+N more lines"), open the file at that exact
-range before finalizing. Only open source files when a node genuinely lacks a
-needed detail, and then at the exact file:line the node points to — never
-re-read whole files.
-
-After big code changes, refresh the graph with `graft build` (deterministic,
-no API key, $0).
-<!-- graft:end -->

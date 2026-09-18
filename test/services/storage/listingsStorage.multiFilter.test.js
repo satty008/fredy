@@ -65,10 +65,11 @@ describe('queryListings - multi-select filters', () => {
       CREATE TABLE listings (
         id TEXT PRIMARY KEY, job_id TEXT, title TEXT, address TEXT, price REAL, size REAL,
         provider TEXT, is_active INTEGER, manually_deleted INTEGER DEFAULT 0,
-        ai_verdict TEXT, status TEXT, created_at INTEGER
+        ai_verdict TEXT, status TEXT, created_at INTEGER, published_at INTEGER
       );
       CREATE TABLE watch_list (id TEXT PRIMARY KEY, listing_id TEXT, user_id TEXT);
       CREATE TABLE listing_travel_times (listing_id TEXT);
+      CREATE TABLE listing_attachments (id TEXT PRIMARY KEY, listing_id TEXT);
     `);
 
     // A resolvable rent reference so immocockpitVerdictFor doesn't bail out on price/size'd 'buy'

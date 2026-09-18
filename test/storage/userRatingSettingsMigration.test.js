@@ -6,9 +6,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Database from 'better-sqlite3';
 
-import { up } from '../../lib/services/storage/migrations/sql/41.user-rating-settings.js';
+import { up } from '../../lib/services/storage/migrations/sql/45.user-rating-settings.js';
 
-describe('migration 41 - user rating settings', () => {
+describe('migration 45 - user rating settings', () => {
   let db;
 
   beforeEach(() => {

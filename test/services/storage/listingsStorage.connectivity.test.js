@@ -79,11 +79,13 @@ describe('listingsStorage connectivity', () => {
         price                 REAL,
         size                  REAL,
         rooms                 REAL,
+        link                  TEXT,
         status                JSON,
         distances             JSONB,
         latitude              REAL,
         longitude             REAL,
         created_at            INTEGER,
+        published_at          INTEGER,
         is_active             INTEGER,
         manually_deleted      INTEGER DEFAULT 0,
         connectivity          JSON,
@@ -94,6 +96,15 @@ describe('listingsStorage connectivity', () => {
       );
       CREATE TABLE jobs (id TEXT PRIMARY KEY, name TEXT, deal_type TEXT, user_id TEXT);
       CREATE TABLE watch_list (id TEXT PRIMARY KEY, listing_id TEXT, user_id TEXT);
+      CREATE TABLE listing_attachments (
+        id TEXT PRIMARY KEY,
+        listing_id TEXT NOT NULL,
+        filename TEXT,
+        mime_type TEXT,
+        size INTEGER,
+        content BLOB,
+        created_at INTEGER
+      );
       CREATE TABLE listing_travel_times (
         listing_id TEXT, label TEXT, transit_minutes INTEGER, car_minutes INTEGER,
         bike_minutes INTEGER, walk_minutes INTEGER, is_estimate INTEGER, transit_geometry TEXT,

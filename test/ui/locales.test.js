@@ -17,6 +17,7 @@ import {
   FILTERABLE_OPERATORS,
 } from '../../ui/src/components/connectivity/connectivityFormat.js';
 import { PLACE_CATEGORIES } from '../../ui/src/services/travelTime/placeCategories.js';
+import { SCAM_SIGNALS } from '../../ui/src/services/listings/scamSignals.js';
 
 const localeDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../ui/src/locales');
 const donateComponent = fs.readFileSync(path.join(localeDir, '../components/donate/Donate.jsx'), 'utf-8');
@@ -112,6 +113,30 @@ const UNTRANSLATED_BACKLOG = {
     'listing.detail.rateWithOwnAi',
     'listing.detail.rateWithOwnAiNotConfigured',
     'listing.detail.toastOwnAiRated',
+    'listing.detail.attachmentsTitle',
+    'listing.detail.attachmentsHint',
+    'listing.detail.attachmentsEmpty',
+    'listing.detail.attachmentsUpload',
+    'listing.detail.attachmentsUploaded',
+    'listing.detail.attachmentsUploadError',
+    'listing.detail.attachmentsLoadError',
+    'listing.detail.attachmentsDeleted',
+    'listing.detail.attachmentsDeleteError',
+    'listing.detail.attachmentsDeleteTitle',
+    'listing.detail.attachmentsDeleteConfirm',
+    'listing.detail.attachmentsTooLarge',
+    'listing.detail.attachmentsFull',
+    'settings.listingAttachmentMaxMb',
+    'settings.listingAttachmentMaxMbHelp',
+    'settings.listingAttachmentMaxMbPlaceholder',
+    'settings.listingAttachmentMaxMbSuffix',
+    'settings.listingAttachmentMaxPerListing',
+    'settings.listingAttachmentMaxPerListingHelp',
+    'settings.listingAttachmentMaxPerListingPlaceholder',
+    'settings.listingAttachmentMaxPerListingSuffix',
+    'settings.toastListingAttachmentInvalid',
+    'listings.cardDocumentsOne',
+    'listings.cardDocuments',
   ],
 };
 
@@ -156,6 +181,15 @@ const COMPUTED_KEYS = [
   ...FILTERABLE_OPERATORS.map((code) => `connectivity.operator.${code}`),
   ...CONNECTIVITY_SOURCES.map((id) => `settings.connectivitySource.${id}`),
   ...CONNECTIVITY_SOURCES.map((id) => `settings.connectivitySourceHelp.${id}`),
+  // The price per square metre verdicts, built from what the deviation works out to, and the two
+  // dashboard descriptions, built from the deal type the median was taken over. A missing one
+  // paints the raw key into the badge on every listing card.
+  ...['below', 'inline', 'above'].map((verdict) => `listings.pricePerSqmVerdict.${verdict}`),
+  ...['rent', 'buy'].map((dealType) => `dashboard.kpiMedianSqmDesc.${dealType}`),
+  // One explanation per scam signal, built from whatever the server stored on the listing. Adding a
+  // signal to the detector is what adds the assertion here, and a missing entry paints the raw key
+  // into the warning panel where the reason should be.
+  ...SCAM_SIGNALS.map((signal) => `listings.scamSignal.${signal}`),
   // The place types a travel time can be measured to. Built from the list rather than written out,
   // so adding a category is what adds the assertion - an unnamed one would otherwise reach the
   // dropdown in the travel time settings as the raw key next to its icon.

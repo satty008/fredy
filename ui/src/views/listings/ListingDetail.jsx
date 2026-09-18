@@ -47,6 +47,7 @@ import { useProviderCountries } from '../../hooks/useProviderCountries.js';
 import no_image from '../../assets/no_image.png';
 import * as timeService from '../../services/time/timeService.js';
 import { formatEuroPrice } from '../../services/price/priceService.js';
+import { formatDecimal } from '../../services/number/numberService.js';
 import { getBoundsFromCoords } from './mapUtils.js';
 import { applyRouteLayers, buildRouteData, placeTargets } from './detailMapLayers.js';
 import { TRAVEL_MODES, formatRoadDistance } from '../../components/transit/travelTimeFormat.js';
@@ -60,6 +61,9 @@ import IconEuro from '../../components/icons/IconEuro.jsx';
 import StatusControl from '../../components/listings/StatusControl.jsx';
 import ImmocockpitVerdictBadge from '../../components/listings/ImmocockpitVerdictBadge.jsx';
 import PriceFactorBadge from '../../components/listings/PriceFactorBadge.jsx';
+import PricePerSqmBadge, { describeBenchmark } from '../../components/listings/PricePerSqmBadge.jsx';
+import { readMarketBenchmark } from '../../services/listings/marketBenchmark.js';
+import ScamPanel from './components/ScamPanel.jsx';
 import ListingFinanceCard from './components/ListingFinanceCard.jsx';
 import PriceHistoryChart from './components/PriceHistoryChart.jsx';
 import NearbyStops from '../../components/transit/NearbyStops.jsx';
@@ -67,6 +71,7 @@ import ConnectivityCard from '../../components/connectivity/ConnectivityCard.jsx
 import TravelTimes from '../../components/transit/TravelTimes.jsx';
 import AddressEditor from './components/AddressEditor.jsx';
 import ColdRentOverrideEditor from './components/ColdRentOverrideEditor.jsx';
+import AttachmentsCard from './components/AttachmentsCard.jsx';
 import './ListingDetail.less';
 import { useTranslation, useLocale } from '../../services/i18n/i18n.jsx';
 import { useFinanceProfile } from '../../hooks/useFinanceProfile.js';
@@ -563,6 +568,10 @@ export default function ListingDetail() {
   };
   const statusLabel = listing.status?.status ? t(statusKeyMap[listing.status.status] ?? listing.status.status) : null;
 
+  // Read once: the row below and the help text behind it are two readings of the same four columns,
+  // and computing them separately is how they end up disagreeing.
+  const marketBenchmark = readMarketBenchmark(listing);
+
   const data = [
     {
       key: t('listing.detail.fieldPrice'),
@@ -576,13 +585,27 @@ export default function ListingDetail() {
     },
     {
       key: t('listing.detail.fieldSize'),
-      value: listing.size ? `${listing.size} m²` : t('common.na'),
+      value: listing.size ? `${formatDecimal(listing.size, locale)} m²` : t('common.na'),
       Icon: <IconExpand />,
       helpText: t('listing.detail.fieldSizeHelp'),
     },
     {
+      key: t('listing.detail.fieldPricePerSqm'),
+      value: marketBenchmark ? <PricePerSqmBadge listing={listing} withTooltip={false} /> : t('common.na'),
+      Icon: <IconEuro />,
+      // Two different explanations. With a benchmark the interesting part is the comparison and
+      // where it came from; without one it is why no comparison is shown, which is a question the
+      // page would otherwise leave the reader to guess at.
+      helpText:
+        marketBenchmark && marketBenchmark.verdict != null
+          ? describeBenchmark(marketBenchmark, t, locale)
+          : t('listing.detail.fieldPricePerSqmHelp'),
+    },
+    {
       key: t('listing.detail.fieldRooms'),
-      value: listing.rooms ? t('listing.detail.fieldRoomsValue', { count: listing.rooms }) : t('common.na'),
+      value: listing.rooms
+        ? t('listing.detail.fieldRoomsValue', { count: formatDecimal(listing.rooms, locale) })
+        : t('common.na'),
       Icon: <IconGridView />,
       helpText: t('listing.detail.fieldRoomsHelp'),
     },
@@ -605,6 +628,18 @@ export default function ListingDetail() {
       helpText: t('listing.detail.fieldAddedHelp'),
     },
   ];
+
+  // The date the portal itself states, when it states one at all, which is what tells this row
+  // apart from "Added" above it. Not every portal does, so it is pushed rather than shown as
+  // another "N/A" next to the figures every listing carries.
+  if (listing.published_at) {
+    data.push({
+      key: t('listing.detail.fieldPublished'),
+      value: timeService.format(listing.published_at, true, locale),
+      Icon: <IconCalendar />,
+      helpText: t('listing.detail.fieldPublishedHelp'),
+    });
+  }
 
   // Only the detail page states these, and only for a part of the listings, so they are pushed
   // rather than shown as another "N/A" next to the figures every listing carries.
@@ -835,6 +870,10 @@ export default function ListingDetail() {
               </Space>
             </div>
 
+            {/* Directly under the notes: both are things the reader adds to a listing rather than
+                things a portal reported, and they are used in the same sitting. */}
+            <AttachmentsCard listingId={listingId} />
+
             {/* The map used to run the full width under the card, which pushed it a screen
                 below the figures. In this column it sits beside the details and the costing,
                 so the whole listing fits on one screen. */}
@@ -924,6 +963,10 @@ export default function ListingDetail() {
               <Title heading={4} style={{ marginBottom: '1rem' }}>
                 {t('listing.detail.detailsTitle')}
               </Title>
+              {/* Before the figures, not after them. Somebody who is about to be defrauded should
+                  meet the warning before they start liking the flat. */}
+              <ScamPanel listing={listing} onChange={() => actions.listingsData.getListing(listingId)} />
+
               <Descriptions column={1}>
                 {data.map((item, index) => (
                   <Descriptions.Item key={index}>

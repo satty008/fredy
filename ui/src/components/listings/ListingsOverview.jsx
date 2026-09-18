@@ -20,13 +20,13 @@ import {
   IconList,
   IconStar,
   IconStarStroked,
+  IconDelete,
 } from '@douyinfe/semi-icons';
 import { useNavigate, useSearchParams } from 'react-router';
 import ListingDeletionModal from '../ListingDeletionModal.jsx';
 import { xhrDelete, xhrPost, errorMessage } from '../../services/xhr.js';
 import { useActions, useSelector } from '../../services/state/store.js';
 import { debounce, measuredPlaces } from '../../utils';
-import { parseCommuteFilter } from '../transit/travelTimeFormat.js';
 import FilterSelect from './FilterSelect.jsx';
 import ListingsFilterPanel from './ListingsFilterPanel.jsx';
 import ActiveFilterChips from '../filters/ActiveFilterChips.jsx';
@@ -36,6 +36,7 @@ import {
   describeActiveFilters,
   clearFilter,
   clearAllFilters,
+  toListingsQuery,
 } from '../../services/listings/listingFilters.js';
 import ListingsGrid from '../grid/listings/ListingsGrid.jsx';
 import ListingsTable from '../table/ListingsTable.jsx';
@@ -76,7 +77,7 @@ const MAX_LISTINGS_PER_RATE_REQUEST = 25;
  */
 const LISTINGS_URL_STATE = {
   page: { defaultValue: 1, codec: parseNumber },
-  sort: { defaultValue: 'created_at', codec: parseString },
+  sort: { defaultValue: 'published_at', codec: parseString },
   dir: { defaultValue: 'desc', codec: parseString },
   q: { defaultValue: null, codec: parseString },
   watch: { defaultValue: null, codec: parseNullableBoolean },
@@ -101,29 +102,6 @@ const LISTINGS_URL_STATE = {
   mop: { defaultValue: null, codec: parseString },
   hidden: { defaultValue: false, codec: parseNullableBoolean },
 };
-
-/**
- * Turns the combined filter value into the two query parameters the API takes.
- *
- * @param {string|null} value - e.g. `transit:30`.
- * @returns {{travelTimeMode: string, travelTimeMaxMinutes: number}|null}
- */
-function toTravelTimeQuery(value) {
-  const parsed = parseCommuteFilter(value);
-  return parsed == null ? null : { travelTimeMode: parsed.mode, travelTimeMaxMinutes: parsed.maxMinutes };
-}
-
-/**
- * A multi-select filter's value (job, aiVerdict, icVerdict, priceFactor) lives in state as an
- * array, but the API query string is one flat parameter per filter - so it travels as the same
- * comma-separated form the URL already uses, and the server splits it back apart.
- *
- * @param {string[]|null} value
- * @returns {string|null}
- */
-function toCommaParam(value) {
-  return Array.isArray(value) && value.length > 0 ? value.join(',') : null;
-}
 
 const ListingsOverview = () => {
   const t = useTranslation();
@@ -168,10 +146,6 @@ const ListingsOverview = () => {
     priceFactor: priceFactorFilter,
     afford: affordabilityFilter,
     commute: commuteFilter,
-    down: connectivityMinDown,
-    fiber: connectivityFiber,
-    mtech: connectivityMobileTech,
-    mop: connectivityMobileOperator,
     hidden: hiddenOnly,
   } = values;
   const setPage = (value) => setValue('page', value);
@@ -179,6 +153,7 @@ const ListingsOverview = () => {
   const setSortDir = (value) => setValue('dir', value);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [listingToDelete, setListingToDelete] = useState(null);
+  const [bulkDeleteVisible, setBulkDeleteVisible] = useState(false);
   const [newAvailableCount, setNewAvailableCount] = useState(0);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [ratingInFlight, setRatingInFlight] = useState(false);
@@ -215,35 +190,25 @@ const ListingsOverview = () => {
     });
   }, [financeThresholds, locale, t]);
 
+  // The one payload the page is described by. The bulk delete sends the same object, which is the
+  // only reason the button can honestly claim to remove what is on screen.
+  const listingsQuery = toListingsQuery(values);
+
   const loadData = () => {
     actions.listingsData.getListingsData({
       page,
       pageSize,
       sortfield: sortField,
       sortdir: sortDir,
-      freeTextFilter,
+      ...listingsQuery,
+      // aiVerdictFilter/icVerdictFilter/priceFactorFilter are fork-only - toListingsQuery only
+      // knows the filters this repo shares with upstream - so they're merged in on top rather
+      // than being part of that shared helper.
       filter: {
-        watchListFilter,
-        jobNameFilter: toCommaParam(jobNameFilter),
-        activityFilter: isHiddenView ? null : activityFilter,
-        providerFilter: toCommaParam(providerFilter),
-        statusFilter,
-        aiVerdictFilter: toCommaParam(aiVerdictFilter),
-        icVerdictFilter: toCommaParam(icVerdictFilter),
-        priceFactorFilter: toCommaParam(priceFactorFilter),
-        // The server turns this into a price range from the saved profile; it ignores the
-        // filter entirely when there is no profile to derive one from.
-        affordabilityFilter,
-        // Only listings that have actually been routed can satisfy this, which is why the control
-        // is offered as an extra filter rather than as the default way to sort the page.
-        ...(toTravelTimeQuery(commuteFilter) ?? {}),
-        connectivityMinDown,
-        connectivityFiber,
-        connectivityMobileTech,
-        // Sent only alongside a technology. On its own the server ignores it anyway, but leaving
-        // it out of the request keeps the query string honest about what is being asked.
-        connectivityMobileOperator: connectivityMobileTech == null ? null : connectivityMobileOperator,
-        hiddenOnly: isHiddenView ? true : undefined,
+        ...listingsQuery.filter,
+        aiVerdictFilter,
+        icVerdictFilter,
+        priceFactorFilter,
       },
     });
   };
@@ -322,7 +287,7 @@ const ListingsOverview = () => {
 
   useEffect(() => {
     return () => {
-      handleFilterChange.cancel && handleFilterChange.cancel();
+      handleFilterChange.cancel?.();
     };
   }, [handleFilterChange]);
 
@@ -450,6 +415,30 @@ const ListingsOverview = () => {
     }
   };
 
+  /**
+   * Delete everything the current filter matches, not just the page on screen.
+   *
+   * Deliberately ignores `listingDeletionPref.skipPrompt`. That preference was made for the
+   * per-row delete, where one unwanted click costs one listing; here it would cost the whole
+   * filtered set without ever saying how large that was.
+   *
+   * @param {boolean} hardDelete
+   */
+  const confirmBulkDeletion = async (hardDelete) => {
+    try {
+      const deleted = await actions.listingsData.deleteFilteredListings({ ...listingsQuery, hardDelete });
+      Toast.success(t('listings.toastBulkDeleted', { count: deleted }));
+      // Whatever page the user was on may no longer exist, and an out-of-range page renders empty
+      // rather than snapping back on its own.
+      setPage(1);
+      loadData();
+    } catch (error) {
+      Toast.error(errorMessage(error, t('listings.toastBulkDeleteError')));
+    } finally {
+      setBulkDeleteVisible(false);
+    }
+  };
+
   const confirmDeletion = async (hardDelete, remember, id = listingToDelete) => {
     try {
       if (remember) {
@@ -515,7 +504,11 @@ const ListingsOverview = () => {
           onChange={(val) => setSortField(val)}
         >
           <Select.Option value="job_name">{t('listings.sortByJobName')}</Select.Option>
-          <Select.Option value="created_at">{t('listings.sortByDate')}</Select.Option>
+          {/* The date the portal states, falling back to the day Fredy found the listing - the
+              order the list reads in by default. "created_at" alone is the other thing entirely:
+              the moment Fredy first saw the advert, whatever the portal says. */}
+          <Select.Option value="published_at">{t('listings.sortByListingDate')}</Select.Option>
+          <Select.Option value="created_at">{t('listings.sortByDateAdded')}</Select.Option>
           <Select.Option value="price">{t('listings.sortByPrice')}</Select.Option>
           <Select.Option value="provider">{t('listings.sortByProvider')}</Select.Option>
         </FilterSelect>
@@ -535,6 +528,19 @@ const ListingsOverview = () => {
         </Tooltip>
 
         <FilterButton activeCount={activeFilterCount} onClick={() => setFiltersOpen(true)} />
+
+        <Tooltip content={t('listings.bulkDeleteTooltip')} trigger="hover" position="top">
+          <span className="listingsOverview__topbar__tooltipWrap">
+            <Button
+              icon={<IconDelete />}
+              type="danger"
+              theme="borderless"
+              disabled={(listingsData?.totalNumber || 0) === 0}
+              onClick={() => setBulkDeleteVisible(true)}
+              aria-label={t('listings.bulkDelete')}
+            />
+          </span>
+        </Tooltip>
 
         <div className="listingsOverview__topbar__view-toggle">
           <Tooltip content={t('listings.tooltipGridView')}>
@@ -748,6 +754,24 @@ const ListingsOverview = () => {
           />
         </div>
       )}
+
+      {/* The same modal the per-row delete opens, with the count spelled out. In the hidden view the
+          rows are soft-deleted already, so a soft delete would do nothing and the modal is reduced
+          to its confirm-only form, which means "remove for good". */}
+      <ListingDeletionModal
+        visible={bulkDeleteVisible}
+        defaultDeleteType={defaultDeleteType}
+        showOptions={!isHiddenView}
+        showRemember={false}
+        title={t('listings.bulkDeleteTitle')}
+        message={
+          isHiddenView
+            ? t('listings.bulkDeleteHiddenMessage', { count: listingsData?.totalNumber || 0 })
+            : t('listings.bulkDeleteMessage', { count: listingsData?.totalNumber || 0 })
+        }
+        onConfirm={confirmBulkDeletion}
+        onCancel={() => setBulkDeleteVisible(false)}
+      />
 
       <ListingDeletionModal
         visible={deleteModalVisible}
