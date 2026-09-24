@@ -9,6 +9,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { TRACKING_POIS } from '../../lib/TRACKING_POIS.js';
 import { COMMUTE_ACTIONS } from '../../ui/src/services/jobs/commuteFilter.js';
+import { JOB_REQUIREMENTS } from '../../ui/src/services/jobs/jobValidation.js';
 import {
   CONNECTIVITY_SOURCES,
   DISPLAY_TECHNOLOGIES,
@@ -18,6 +19,8 @@ import {
 } from '../../ui/src/components/connectivity/connectivityFormat.js';
 import { PLACE_CATEGORIES } from '../../ui/src/services/travelTime/placeCategories.js';
 import { SCAM_SIGNALS } from '../../ui/src/services/listings/scamSignals.js';
+import { PLACEHOLDERS, FLAG_PLACEHOLDERS } from '../../lib/services/application/placeholders.js';
+import { TEMPLATE_LANGUAGES } from '../../lib/services/application/templates/index.js';
 
 const localeDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../ui/src/locales');
 const donateComponent = fs.readFileSync(path.join(localeDir, '../components/donate/Donate.jsx'), 'utf-8');
@@ -138,6 +141,173 @@ const UNTRANSLATED_BACKLOG = {
     'listings.cardDocumentsOne',
     'listings.cardDocuments',
   ],
+  // es.json and it.json arrived in this merge as upstream's own new locales, translated against
+  // upstream's key set only - they never had a chance to cover this fork's own additions, which is
+  // every key below. Same backlog for both: neither has had a native speaker's pass yet.
+  'es.json': [
+    'jobs.mutation.filterMinRoi',
+    'listings.filterAiVerdictPlaceholder',
+    'listings.filterAiVerdictGood',
+    'listings.filterAiVerdictMaybe',
+    'listings.filterAiVerdictBad',
+    'listings.filterAiVerdictUnrated',
+    'listings.filterImmocockpitVerdictGood',
+    'listings.filterImmocockpitVerdictMaybe',
+    'listings.filterImmocockpitVerdictBad',
+    'listings.filterIcVerdictPlaceholder',
+    'listings.filterIcVerdictUnavailable',
+    'listings.filterPriceFactorPlaceholder',
+    'listings.filterAiVerdictHelp',
+    'listings.filterIcVerdictHelp',
+    'listings.filterPriceFactorHelp',
+    'listings.selectForRating',
+    'listings.selectionBannerCount',
+    'listings.selectionBannerClear',
+    'listings.selectionBannerRate',
+    'listings.toastRatingStarted',
+    'listings.toastRatingBusy',
+    'listings.toastRatingError',
+    'listings.selectionBannerRateWithOwnAi',
+    'listings.toastOwnAiRatingDone',
+    'listings.toastOwnAiRatingPartial',
+    'listings.toastOwnAiRatingError',
+    'listings.rateWithOwnAiNotConfigured',
+    'listings.rateWithOwnAiTooMany',
+    'listings.immocockpitVerdictPrefix',
+    'listings.immocockpitVerdictTooltip',
+    'listings.immocockpitVerdictTooltipDetailed',
+    'listings.priceFactorPrefix',
+    'listings.priceFactorTooltip',
+    'listing.detail.editColdRent',
+    'listing.detail.editColdRentHint',
+    'listing.detail.coldRentOverridePlaceholder',
+    'listing.detail.coldRentOverrideSave',
+    'listing.detail.coldRentOverrideClear',
+    'listing.detail.coldRentOverrideActive',
+    'listing.detail.toastColdRentOverrideSaved',
+    'listing.detail.toastColdRentOverrideCleared',
+    'listing.detail.toastColdRentOverrideError',
+    'listing.detail.rateWithAi',
+    'listing.detail.rateWithOwnAi',
+    'listing.detail.rateWithOwnAiNotConfigured',
+    'listing.detail.toastOwnAiRated',
+    'listing.detail.toastRatingStarted',
+    'settings.tabAiRating',
+    'listing.detail.analyzeHint',
+    'listing.detail.analyzeButton',
+    'aiRating.providersTitle',
+    'aiRating.providersHelp',
+    'aiRating.addProvider',
+    'aiRating.addProviderPickType',
+    'aiRating.addProviderPickTypePlaceholder',
+    'aiRating.addProviderTitle',
+    'aiRating.editProviderTitle',
+    'aiRating.noProviders',
+    'aiRating.columnName',
+    'aiRating.columnType',
+    'aiRating.providerNameLabel',
+    'aiRating.providerNamePlaceholder',
+    'aiRating.providerNameRequired',
+    'aiRating.secretPlaceholder',
+    'aiRating.providerSaved',
+    'aiRating.providerDeleted',
+    'aiRating.deleteConfirmTitle',
+    'aiRating.deleteConfirmText',
+    'aiRating.instructionsTitle',
+    'aiRating.instructionsHelp',
+    'aiRating.noProvidersBanner',
+    'aiRating.activeProviderLabel',
+    'aiRating.activeProviderPlaceholder',
+    'aiRating.modelLabel',
+    'aiRating.modelPlaceholder',
+    'aiRating.instructionsLabel',
+    'aiRating.customizedBanner',
+    'aiRating.resetToDefault',
+    'aiRating.settingsSaved',
+    'aiRating.instructionsReset',
+  ],
+  'it.json': [
+    'jobs.mutation.filterMinRoi',
+    'listings.filterAiVerdictPlaceholder',
+    'listings.filterAiVerdictGood',
+    'listings.filterAiVerdictMaybe',
+    'listings.filterAiVerdictBad',
+    'listings.filterAiVerdictUnrated',
+    'listings.filterImmocockpitVerdictGood',
+    'listings.filterImmocockpitVerdictMaybe',
+    'listings.filterImmocockpitVerdictBad',
+    'listings.filterIcVerdictPlaceholder',
+    'listings.filterIcVerdictUnavailable',
+    'listings.filterPriceFactorPlaceholder',
+    'listings.filterAiVerdictHelp',
+    'listings.filterIcVerdictHelp',
+    'listings.filterPriceFactorHelp',
+    'listings.selectForRating',
+    'listings.selectionBannerCount',
+    'listings.selectionBannerClear',
+    'listings.selectionBannerRate',
+    'listings.toastRatingStarted',
+    'listings.toastRatingBusy',
+    'listings.toastRatingError',
+    'listings.selectionBannerRateWithOwnAi',
+    'listings.toastOwnAiRatingDone',
+    'listings.toastOwnAiRatingPartial',
+    'listings.toastOwnAiRatingError',
+    'listings.rateWithOwnAiNotConfigured',
+    'listings.rateWithOwnAiTooMany',
+    'listings.immocockpitVerdictPrefix',
+    'listings.immocockpitVerdictTooltip',
+    'listings.immocockpitVerdictTooltipDetailed',
+    'listings.priceFactorPrefix',
+    'listings.priceFactorTooltip',
+    'listing.detail.editColdRent',
+    'listing.detail.editColdRentHint',
+    'listing.detail.coldRentOverridePlaceholder',
+    'listing.detail.coldRentOverrideSave',
+    'listing.detail.coldRentOverrideClear',
+    'listing.detail.coldRentOverrideActive',
+    'listing.detail.toastColdRentOverrideSaved',
+    'listing.detail.toastColdRentOverrideCleared',
+    'listing.detail.toastColdRentOverrideError',
+    'listing.detail.rateWithAi',
+    'listing.detail.rateWithOwnAi',
+    'listing.detail.rateWithOwnAiNotConfigured',
+    'listing.detail.toastOwnAiRated',
+    'listing.detail.toastRatingStarted',
+    'settings.tabAiRating',
+    'listing.detail.analyzeHint',
+    'listing.detail.analyzeButton',
+    'aiRating.providersTitle',
+    'aiRating.providersHelp',
+    'aiRating.addProvider',
+    'aiRating.addProviderPickType',
+    'aiRating.addProviderPickTypePlaceholder',
+    'aiRating.addProviderTitle',
+    'aiRating.editProviderTitle',
+    'aiRating.noProviders',
+    'aiRating.columnName',
+    'aiRating.columnType',
+    'aiRating.providerNameLabel',
+    'aiRating.providerNamePlaceholder',
+    'aiRating.providerNameRequired',
+    'aiRating.secretPlaceholder',
+    'aiRating.providerSaved',
+    'aiRating.providerDeleted',
+    'aiRating.deleteConfirmTitle',
+    'aiRating.deleteConfirmText',
+    'aiRating.instructionsTitle',
+    'aiRating.instructionsHelp',
+    'aiRating.noProvidersBanner',
+    'aiRating.activeProviderLabel',
+    'aiRating.activeProviderPlaceholder',
+    'aiRating.modelLabel',
+    'aiRating.modelPlaceholder',
+    'aiRating.instructionsLabel',
+    'aiRating.customizedBanner',
+    'aiRating.resetToDefault',
+    'aiRating.settingsSaved',
+    'aiRating.instructionsReset',
+  ],
 };
 
 /**
@@ -166,6 +336,9 @@ function sourceFiles(dir) {
 const COMPUTED_KEYS = [
   ...['transit', 'car', 'bike', 'walk'].map((mode) => `travelTime.mode.${mode}`),
   ...['good', 'acceptable', 'poor'].map((band) => `map.commuteBand.${band}`),
+  // The map's colour key, built from the entry it is explaining. Same failure mode one line up: a
+  // missing one paints `map.legend.stack` next to the dot instead of naming what the dot means.
+  ...['listing', 'stack', 'inRing', 'home'].map((entry) => `map.legend.${entry}`),
   // Both families are built from COMMUTE_ACTIONS, so the list below is the one place that has to be
   // kept in step with it - and the assertion below does exactly that rather than repeating the
   // three names a fourth time. A missing entry here would print `jobs.mutation.commuteAction.mark`
@@ -194,6 +367,24 @@ const COMPUTED_KEYS = [
   // so adding a category is what adds the assertion - an unnamed one would otherwise reach the
   // dropdown in the travel time settings as the raw key next to its icon.
   ...PLACE_CATEGORIES.map((category) => `travelTime.placeCategory.${category.id}`),
+  // The application letter catalogue. Every placeholder is offered as a clickable chip in the
+  // template editor and as a "still missing" chip in the copy dialog, both built from the catalogue
+  // itself - so adding a placeholder is what adds the assertion, and a forgotten label would reach
+  // the user as `application.placeholder.applicant.wbs` printed inside a tag.
+  ...Object.values(PLACEHOLDERS).map((definition) => definition.labelKey),
+  ...TEMPLATE_LANGUAGES.map((language) => `application.language.${language}`),
+  ...['listing', 'applicant', 'contact', 'env'].map((group) => `settings.application.group.${group}`),
+  ...Object.values(FLAG_PLACEHOLDERS).map((flag) => `settings.application.flag.${flag}`),
+  ...['permanent', 'temporary', 'selfEmployed', 'civilServant', 'student', 'retired'].map(
+    (type) => `settings.application.employmentType.${type}`,
+  ),
+  // The job form's readiness bar names each missing requirement by a key built from the list, and
+  // a fifth requirement without one would print the raw key into the bar.
+  ...JOB_REQUIREMENTS.map((requirement) => `jobs.mutation.requirement.${requirement.key}`),
+  // `relativeTime` builds its key from the direction and the unit, one day included.
+  ...['In', 'Ago'].flatMap((direction) =>
+    ['Minutes', 'Hours', 'Day', 'Days'].map((unit) => `dashboard.time${direction}${unit}`),
+  ),
 ];
 
 /**
@@ -202,9 +393,12 @@ const COMPUTED_KEYS = [
  * The lookbehind is what keeps this honest: without it the pattern also matches the tail of any
  * method whose name ends in `t`, so an ordinary `params.get('returnTo')` or `url.set('x')` would be
  * reported as a missing translation key and fail the suite for no reason.
+ *
+ * A comma as well as a closing parenthesis after the key: a call that passes variables,
+ * `t('key', { count })`, is a key the app asks for just the same, and those used to go unchecked.
  * @type {RegExp}
  */
-const TRANSLATION_CALL = /(?<![\w.$])t\('([^']+)'\)/g;
+const TRANSLATION_CALL = /(?<![\w.$])t\('([^']+)'[,)]/g;
 
 describe('locales', () => {
   it('ships english as the fallback language', () => {
@@ -243,6 +437,23 @@ describe('locales', () => {
    * would need two new keys in three files. Naming the two families here is what turns that into a
    * failing test rather than a raw key sitting in a select.
    */
+  /**
+   * The placeholder catalogue drives both the editor's chips and the dialog's missing-field list,
+   * so a placeholder without a label is a raw key painted into a tag in two places at once.
+   */
+  it('has a label for every application placeholder there is', () => {
+    for (const [key, definition] of Object.entries(PLACEHOLDERS)) {
+      expect(definition.labelKey, key).toBeTypeOf('string');
+      expect(english, key).toHaveProperty([definition.labelKey]);
+    }
+  });
+
+  it('names every language an application letter can be written in', () => {
+    for (const language of TEMPLATE_LANGUAGES) {
+      expect(english).toHaveProperty([`application.language.${language}`]);
+    }
+  });
+
   it('has a label and an explanation for every commute action there is', () => {
     for (const action of COMMUTE_ACTIONS) {
       expect(COMPUTED_KEYS).toContain(`jobs.mutation.commuteAction.${action}`);

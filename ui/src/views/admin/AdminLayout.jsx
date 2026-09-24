@@ -13,9 +13,10 @@ import {
   IconUserGroup,
 } from '@douyinfe/semi-icons';
 
+import ScopeBadge from '../../components/scopeBadge/ScopeBadge.jsx';
 import SettingsShell from '../../components/settingsShell/SettingsShell.jsx';
-import ScopeBanner from './ScopeBanner.jsx';
 import { useAdminSettings } from './useAdminSettings.js';
+import { useUnsavedWarning } from '../../hooks/useUnsavedWarning.js';
 import { useSelector } from '../../services/state/store';
 import { useTranslation } from '../../services/i18n/i18n.jsx';
 
@@ -35,6 +36,9 @@ export default function AdminLayout() {
   const t = useTranslation();
   const settings = useSelector((state) => state.generalSettings.settings);
   const admin = useAdminSettings(settings);
+  // Here as well as on each page: the form outlives a tab switch, so an edit left on System is still
+  // unsaved while Routing is on screen, and a closed tab must still ask about it.
+  useUnsavedWarning(admin.systemDirty || admin.executionDirty || admin.connectivityDirty || admin.routingDirty);
 
   const tabs = [
     { path: '/admin/system', label: t('admin.tabSystem'), icon: <IconSignal size="small" /> },
@@ -51,13 +55,18 @@ export default function AdminLayout() {
       icon: (
         <IconAlertTriangle
           size="small"
-          style={{ color: settings?.debug_logging_enabled ? 'var(--semi-color-danger)' : undefined }}
+          className={settings?.debug_logging_enabled ? 'settingsShell__tabIcon--alert' : undefined}
         />
       ),
     },
   ];
 
-  return <SettingsShell title={t('admin.title')} tabs={tabs} banner={<ScopeBanner />} context={admin} />;
+  // No standing line under the heading. The scope band that used to sit here said the same thing
+  // on all seven tabs, every visit, and moving it into the subtitle only made it quieter noise -
+  // "Administration" already says whose settings these are. The chip that replaces it is four words
+  // beside the title, not a strip across the page, and it is there because each tab is a route of
+  // its own.
+  return <SettingsShell title={t('admin.title')} badge={<ScopeBadge scope="instance" />} tabs={tabs} context={admin} />;
 }
 
 AdminLayout.displayName = 'AdminLayout';
