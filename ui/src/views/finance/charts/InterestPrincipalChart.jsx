@@ -88,7 +88,7 @@ export default function InterestPrincipalChart({ scenario, height = 280 }) {
   }
 
   return (
-    <div style={{ height }}>
+    <div style={{ height, position: 'relative', width: '100%' }}>
       <Bar data={data} options={options} />
     </div>
   );

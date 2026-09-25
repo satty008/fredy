@@ -139,7 +139,7 @@ export default function AffordabilityScatter({ items = [], height = 340 }) {
   }
 
   return (
-    <div style={{ height }}>
+    <div style={{ height, position: 'relative', width: '100%' }}>
       <Scatter data={{ datasets }} options={options} />
     </div>
   );

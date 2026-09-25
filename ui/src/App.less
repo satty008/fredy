@@ -15,10 +15,18 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    // Semi's own Layout only sets flex: auto here, never min-width - a flex item's default minimum
+    // width is its content's natural width, not 0. Any unwrappable row anywhere on any page (a
+    // route-time picker, a chip list, a button row) was enough to keep this from shrinking below
+    // that content's width, pushing the whole shell wider than the sidebar left room for and past
+    // the screen's actual edge - overflow-x: hidden below only clips a child that overflows a box
+    // already sized correctly, it does nothing if the box itself is the wrong size.
+    min-width: 0;
   }
 
   &__content {
     flex: 1;
+    min-width: 0;
     overflow-y: auto;
     overflow-x: hidden;
     position: relative;
