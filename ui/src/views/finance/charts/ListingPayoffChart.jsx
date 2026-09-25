@@ -98,7 +98,7 @@ export default function ListingPayoffChart({ scenario, currentAge = null, height
   }
 
   return (
-    <div style={{ height }}>
+    <div style={{ height, position: 'relative', width: '100%' }}>
       <Line data={data} options={options} plugins={[zinsbindungBandPlugin]} />
     </div>
   );

@@ -68,6 +68,12 @@
   }
 
   &__chart {
+    // Chart.js sizes its canvas off this element's own box, which needs an explicit width to
+    // shrink against - without one it fell back to the canvas's last-rendered pixel width, which
+    // doesn't shrink on its own and forced this card (and everything sharing its flex ancestor
+    // chain up to the app shell) wider than the screen on a narrow viewport.
+    width: 100%;
+    min-width: 0;
     margin-bottom: @space-3;
   }
 

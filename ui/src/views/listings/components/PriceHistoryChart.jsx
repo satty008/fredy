@@ -102,7 +102,7 @@ export default function PriceHistoryChart({ data = [], locale = 'de-DE', height 
   }
 
   return (
-    <div style={{ height }}>
+    <div style={{ height, position: 'relative', width: '100%' }}>
       <Line data={chartData} options={options} />
     </div>
   );

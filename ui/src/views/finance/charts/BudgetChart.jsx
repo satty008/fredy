@@ -145,7 +145,7 @@ export default function BudgetChart({ budget, monthlyRate = 0, rateLabel, height
   };
 
   return (
-    <div style={{ height }}>
+    <div style={{ height, position: 'relative', width: '100%' }}>
       <Bar data={data} options={options} plugins={[ruleMarkerPlugin]} />
     </div>
   );

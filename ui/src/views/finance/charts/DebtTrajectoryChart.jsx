@@ -115,7 +115,7 @@ export default function DebtTrajectoryChart({ scenarios = [], currentAge = null,
   }
 
   return (
-    <div style={{ height }}>
+    <div style={{ height, position: 'relative', width: '100%' }}>
       <Line data={{ labels, datasets }} options={options} plugins={[zinsbindungBandPlugin]} />
     </div>
   );

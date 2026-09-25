@@ -136,7 +136,7 @@ export default function CostBreakdownChart({ financing, height = 280 }) {
   };
 
   return (
-    <div style={{ height }}>
+    <div style={{ height, position: 'relative', width: '100%' }}>
       <Doughnut data={data} options={options} plugins={[centerTotalPlugin]} />
     </div>
   );

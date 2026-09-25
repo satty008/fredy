@@ -13,6 +13,13 @@
    map: any of the three turns the ancestor into the containing block for `position: fixed`, and
    the map goes fullscreen by becoming exactly that. */
 .listing-detail {
+  // Explicit, not left to auto: .app__content is a column flex container, and an auto cross size
+  // on a flex item with auto cross-margins (centring past max-width) opts it out of
+  // align-items: stretch entirely - it falls back to fit-content sizing off its own children's
+  // preferred width instead of the space actually available, which on a narrow viewport is
+  // however wide this page's widest card wants to be, clipped by .app__content's overflow-x:
+  // hidden rather than fitted to the screen.
+  width: 100%;
   max-width: @listing-detail-max;
   margin: 0 auto;
   padding-bottom: @space-12;
