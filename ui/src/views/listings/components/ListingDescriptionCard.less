@@ -71,6 +71,11 @@
     margin: 0;
     max-width: 78ch;
     white-space: pre-wrap;
+    // pre-wrap only breaks at normal word boundaries - a portal-scraped description carrying a
+    // stray URL or a long compound word with nowhere to break ran past the card's edge and off the
+    // screen on a narrow viewport instead of wrapping.
+    overflow-wrap: break-word;
+    word-break: break-word;
     font-size: @text-base;
     line-height: 1.6;
     // Body copy, so @color-muted rather than @color-faint - the faint token is for hairlines and

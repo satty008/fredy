@@ -1,11 +1,17 @@
 @import './tokens.less';
 
 .app {
+  // 100vh first as a fallback for browsers without dvh support; 100dvh after it wins wherever it's
+  // understood. An installed Android PWA sizes 100vh against the largest possible viewport rather
+  // than what's actually visible once Chrome's own UI claims its share, which cut the bottom of the
+  // shell off screen - 100dvh tracks the real visible height instead.
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
 
   &__main {
     height: 100vh;
+    height: 100dvh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
