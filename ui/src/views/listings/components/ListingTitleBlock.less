@@ -138,6 +138,14 @@
       align-items: stretch;
     }
 
+    // flex: 1 1 24rem above is a width hint for the row layout - the address grows to fill
+    // whatever's left beside the status control. Stacked into a column, the same flex-basis reads
+    // as a HEIGHT hint instead, and with &__status no longer competing for space, it stretched
+    // this block to a 384px-tall row for one line of text. Its own content sizes it here.
+    &__address {
+      flex: none;
+    }
+
     &__status {
       justify-content: space-between;
 
