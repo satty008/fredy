@@ -56,7 +56,8 @@ scheduler (every N minutes) or manual trigger via POST /api/jobs/:id/run
       2. provider.getListings()            # API or Puppeteer+Cheerio
       3. provider.normalize(listing)       # raw → ParsedListing
       4. provider.filter(listing)          # blacklist + required fields
-      5. filter to hashes not yet in DB
+      5. filter to hashes not yet in DB; for price-tracked providers, a stored row with the same
+         link is the same advert at a new price: price change notification, not a new listing
       6. provider.fetchDetails()           # optional enrichment
       7. geocodeAddress()                  # optional lat/lng
       8. storeListings()
@@ -79,7 +80,7 @@ scheduler (every N minutes) or manual trigger via POST /api/jobs/:id/run
   boxes from `ui/src/components/map/countryBounds.js`. Where no provider exists to ask - home
   addresses, the listings map, the listing detail - the answer is the union across the jobs the user
   can see, and where the job form is open it is the providers ticked in it
-- `config` - the **static** `ProviderConfig` template: `requiredFieldNames`, `crawlContainer`, `crawlFields`, `sortByDateParam`, `normalize()`, optional `getListings()`, `fetchDetails()`, `activeTester()`. `url` is `null` here and there is no bound `filter`.
+- `config` - the **static** `ProviderConfig` template: `requiredFieldNames`, `crawlContainer`, `crawlFields`, `sortByDateParam`, `normalize()`, optional `getListings()`, `fetchDetails()`, `activityProbe()`, and `needsBrowser: false` on a provider whose search and details never touch the browser (ImmoScout's mobile API, flatfox, the tecnocasa network), so a job run or detail fetch with only such providers starts no Chromium. `url` is `null` here and there is no bound `filter`. A portal whose pages only answer a browser session (DataDome answers node with 403 whether an advert is online or not - immowelt, SeLoger) declares `browserActivityProbe(link, browser)` and `priceTracking.browserProbe(listing, browser)` instead; the alive-checker and the price tracker start one browser per run for them, and only when a due listing needs it.
 - `createConfig(sourceConfig, blacklist)` - returns a **fresh** `ProviderConfig` per job run: the template plus this run's `url`, `enabled`, and a `filter` closed over this run's blacklist.
 
 Providers are **stateless**. Nothing run-specific may live at module scope: two jobs can execute
@@ -114,6 +115,7 @@ An adapter *configuration* is separate from the adapter itself: it is a row in `
 | Migrations | `lib/services/storage/migrations/` | Numbered JS files each exporting `up(db)`; checksum-tracked in `schema_migrations` |
 | Extractor | `lib/services/extractor/` | Orchestrates Puppeteer + Cheerio; shared browser instance per job |
 | Listing documents | `lib/services/storage/listingAttachmentsStorage.js` | Uploaded exposés (`listing_attachments`), bytes and all. Type and filename guards in `lib/services/listings/attachmentTypes.js`; routes in `lib/api/routes/listingAttachmentsRouter.js` |
+| Listing pictures | `lib/services/storage/listingMediaStorage.js` | First picture as WebP bytes, the rest of the gallery as deflated urls (`listing_media`). Download and shrinking in `lib/services/listings/listingPictures.js` (sharp), background queue in `previewCaptureQueue.js`, served by `GET /api/listings/:id/image` |
 
 ### Uploaded documents live in the database
 
@@ -140,6 +142,37 @@ The type stored on a row comes from the file's magic bytes, never from the `Cont
 browser sent, because these files are served back from Fredy's own origin: a renamed `.html`
 getting through would be stored cross-site scripting. Responses carry `nosniff`, and only images
 go out `inline`.
+
+### Listing pictures live in the database too
+
+The browser used to load `listings.image_url` straight from the portal's CDN, so a listing's picture
+disappeared the day the portal took the advert down. Now the first picture is kept as bytes in
+`listing_media`, for the same reasons the exposés are (see above): the `/db` volume is what users
+persist, backups carry it, and the cascade disposes of it on every path a listing can leave by.
+
+- **First picture: bytes, small.** Downloaded once, scaled to at most 800px and re-encoded as WebP
+  q75 with `sharp`, typically 30 to 70 KB. Where re-encoding would not shrink it, the original is
+  kept. A platform without a sharp build keeps the portal's bytes up to 512 KB instead.
+- **Every further picture: urls, deflated.** The gallery a provider already loaded (`listing.images`,
+  see `lib/utils/listingImages.js`) costs no request, and twenty urls of one listing differ in little
+  but an id, so they deflate to about a quarter of their JSON. Bytes for twenty pictures would be a
+  megabyte per listing.
+- **Its own table.** The overview and detail reads select `l.*`, so a BLOB column on `listings`
+  would ride along on every page. `preview` is the table's last column, and nothing may
+  `SELECT *` from it.
+- **Never on the critical path.** The pipeline queues the capture after the area filter and does
+  not wait for it (`previewCaptureQueue.js`, two downloads at a time); a notification is never late
+  because a CDN is slow. A failed download is recorded and not retried for 24 hours.
+- **Backfill by looking.** Every `<img>` in the interface points at `GET /api/listings/:id/image`
+  (`listingPictureSrc` in `ui/src/services/listings/listingPictures.js`). With bytes kept it serves
+  them; otherwise it redirects to the portal, which is exactly what the browser did before, and
+  queues the capture so the next request finds them. Nothing walks the old listings.
+- **The download is guarded like the MCP photo tool's**, which now shares it: every redirect hop has
+  to pass `isPubliclyFetchableUrl`, and the stored type comes from the magic bytes (JPEG, PNG, GIF,
+  WebP only), served with `nosniff`, because these bytes are third-party content on Fredy's origin.
+
+A manual detail refetch stores the gallery the detail page carried, which is how a listing found
+before galleries were kept gets one.
 
 ### Frontend
 
@@ -200,12 +233,15 @@ setting has one home, and a second copy is a second answer waiting to disagree w
 **Things CSS cannot switch, and how they are handled.** Two kinds:
 
 - *Canvas.* Charts are painted onto a canvas and keep whatever they were last painted with, so
-  `chartTheme.js` reads its colours from the custom properties through getters, and `<Layout>` in
-  `App.jsx` is keyed on the theme so everything below it remounts on a switch. Never reintroduce a
+  `chartTheme.js` reads its colours from the custom properties through getters when a chart is
+  built. The theme is only switched on the preferences page, where no chart is on screen, so every
+  chart is built after the switch. Nothing is remounted for it: `<Layout>` used to be keyed on the
+  theme, and that threw away whatever had been typed on the page and not saved. A chart placed
+  where the theme can change would have to be keyed on the theme itself. Never reintroduce a
   hardcoded hex there - the file used to carry a hand-maintained copy of the palette and it is gone.
-- *Assets.* The wordmark has a light and a dark cut, and no custom property can swap a PNG. Those
-  call sites read `currentTheme()` directly. Everything expressible as a colour should use the
-  tokens and let CSS do the work.
+- *Assets.* The wordmark has a light and a dark cut, and no custom property can swap a PNG. `Logo`
+  reads the theme from the store, as `App.jsx` does, so a switch re-renders it. Everything
+  expressible as a colour should use the tokens and let CSS do the work.
 
 **Colours that are legitimately literal**: scrims and hairlines drawn over listing photography,
 which stays photography in both themes; `#000` used as a mask stencil; white on the accent, which

@@ -6,14 +6,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useSelector, useActions } from '../../services/state/store.js';
-import { Banner, Button, Divider, Image, Select, Space, Spin, Toast, Tooltip, Typography } from '@douyinfe/semi-ui-19';
-import { IconLink, IconMaximize } from '@douyinfe/semi-icons';
+import { IconLink } from '@douyinfe/semi-icons';
+import { Banner, Button, Space, Spin, Toast, Typography } from '@douyinfe/semi-ui-19';
 
 import maplibregl from '../../components/map/maplibre.js';
 import { MARKER_COLORS } from '../../components/map/markerColors.js';
 import { useProviderCountries } from '../../hooks/useProviderCountries.js';
-import { useScreenWidth } from '../../hooks/screenWidth.js';
-import no_image from '../../assets/no_image.png';
+import { PHONE_BREAKPOINT, useScreenWidth } from '../../hooks/screenWidth.js';
 import { getBoundsFromCoords } from './mapUtils.js';
 import { escapeHtml } from './listingPopupContent.jsx';
 import { applyRouteLayers, buildRouteData, placeTargets } from './detailMapLayers.js';
@@ -24,13 +23,11 @@ import ListingDeletionModal from '../../components/ListingDeletionModal.jsx';
 import ApplicationModal from './components/ApplicationModal.jsx';
 
 import IconEuro from '../../components/icons/IconEuro.jsx';
-import ImmocockpitVerdictBadge from '../../components/listings/ImmocockpitVerdictBadge.jsx';
-import PriceFactorBadge from '../../components/listings/PriceFactorBadge.jsx';
 import ScamPanel from './components/ScamPanel.jsx';
+import ListingPictures from './components/ListingPictures.jsx';
 import ListingFinanceCard from './components/ListingFinanceCard.jsx';
 import NearbyStops from '../../components/transit/NearbyStops.jsx';
 import ConnectivityCard from '../../components/connectivity/ConnectivityCard.jsx';
-import ColdRentOverrideEditor from './components/ColdRentOverrideEditor.jsx';
 import ListingActionBar from './components/ListingActionBar.jsx';
 import ListingTitleBlock from './components/ListingTitleBlock.jsx';
 import ListingKeyFacts from './components/ListingKeyFacts.jsx';
@@ -46,38 +43,6 @@ const { Text } = Typography;
 
 /** Above this the page is two columns; below it everything stacks into one. */
 const RAIL_BREAKPOINT = 1180;
-/** Below this the action bar moves to the bottom edge and the secondary cards fold shut. */
-const PHONE_BREAKPOINT = 768;
-
-/**
- * A card that folds itself shut on a phone and stays open everywhere else.
- *
- * One column of six open cards is a very long page, and the ones worth folding are the ones read
- * second: the ad's own prose, the workspace, and the two enrichment cards. The `<details>` element
- * does the whole job - it is keyboard operable and announced as a disclosure without a line of
- * JavaScript - and the card inside gives up its own heading to the summary, which is why the
- * stylesheet hides it.
- *
- * @param {Object} props
- * @param {boolean} props.enabled - Whether to fold at all. False renders the children bare.
- * @param {string} props.title
- * @param {string} [props.hint] - The one-line gist shown while shut.
- * @param {React.ReactNode} props.children
- * @returns {React.ReactNode}
- */
-function PhoneCollapse({ enabled, title, hint, children }) {
-  if (!enabled) return children;
-
-  return (
-    <details className="listing-collapse">
-      <summary className="listing-collapse__summary">
-        <span className="listing-collapse__title">{title}</span>
-        {hint && <span className="listing-collapse__hint">{hint}</span>}
-      </summary>
-      {children}
-    </details>
-  );
-}
 
 /**
  * Models the AI rater is allowed to run with. Kept in sync by hand with the allowlists in
@@ -123,6 +88,36 @@ function buildImmocockpitUrl(listing) {
 }
 
 /**
+ * A card that folds itself shut on a phone and stays open everywhere else.
+ *
+ * One column of six open cards is a very long page, and the ones worth folding are the ones read
+ * second: the ad's own prose, the workspace, and the two enrichment cards. The `<details>` element
+ * does the whole job - it is keyboard operable and announced as a disclosure without a line of
+ * JavaScript - and the card inside gives up its own heading to the summary, which is why the
+ * stylesheet hides it.
+ *
+ * @param {Object} props
+ * @param {boolean} props.enabled - Whether to fold at all. False renders the children bare.
+ * @param {string} props.title
+ * @param {string} [props.hint] - The one-line gist shown while shut.
+ * @param {React.ReactNode} props.children
+ * @returns {React.ReactNode}
+ */
+function PhoneCollapse({ enabled, title, hint, children }) {
+  if (!enabled) return children;
+
+  return (
+    <details className="listing-collapse">
+      <summary className="listing-collapse__summary">
+        <span className="listing-collapse__title">{title}</span>
+        {hint && <span className="listing-collapse__hint">{hint}</span>}
+      </summary>
+      {children}
+    </details>
+  );
+}
+
+/**
  * The listing detail page.
  *
  * A layout container and nothing else: it owns the data, the map instance and the handlers, and
@@ -142,11 +137,11 @@ export default function ListingDetail() {
   const listing = useSelector((state) => state.listingsData.currentListing);
   const userSettings = useSelector((state) => state.userSettings.settings);
   const connectivityEnabled = useSelector((state) => state.generalSettings.settings?.connectivityEnabled === true);
+  const pois = useSelector((state) => state.tracking.pois);
+  const savedAddresses = useMemo(() => getAddresses(userSettings), [userSettings]);
   const currentUser = useSelector((state) => state.user.currentUser);
   const isAdmin = currentUser?.isAdmin === true;
   const ratingSettings = useSelector((state) => state.ratingSettings);
-  const pois = useSelector((state) => state.tracking.pois);
-  const savedAddresses = useMemo(() => getAddresses(userSettings), [userSettings]);
   const listingDeletionPref = userSettings?.listing_deletion_preference;
   const defaultDeleteType = listingDeletionPref?.hardDelete ? 'hard' : 'soft';
   // The listing does name a provider, but the pin can be dragged anywhere the user's own searches
@@ -160,11 +155,8 @@ export default function ListingDetail() {
   const [loading, setLoading] = useState(true);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [applicationVisible, setApplicationVisible] = useState(false);
-  const [imagePreview, setImagePreview] = useState(false);
   const [notesDraft, setNotesDraft] = useState('');
   const [notesSaving, setNotesSaving] = useState(false);
-  const [ratingInFlight, setRatingInFlight] = useState(false);
-  const [ratingModel, setRatingModel] = useState(DEFAULT_RATING_MODEL);
   const [ownAiRatingInFlight, setOwnAiRatingInFlight] = useState(false);
   const [priceHistory, setPriceHistory] = useState([]);
   // Set while the user is placing the listing by hand: carries the address text they typed, waiting
@@ -190,13 +182,30 @@ export default function ListingDetail() {
   // to comes from this listing's own travel times, which is where the sweep recorded it.
   const homeAddresses = useMemo(() => [...savedAddresses, ...placeTargets(routeTimes)], [savedAddresses, routeTimes]);
 
+  // Keyed on what the times say, as TravelTimes does: every action on this page (watch, status,
+  // note) reloads the listing and hands over a new array with the same times. Reset on that, the
+  // route TravelTimes had refined was thrown away and the map redrawn without it.
+  const listingTravelTimesKey = JSON.stringify(listing?.travelTimes ?? []);
   useEffect(() => {
     setRouteTimes(listing?.travelTimes ?? []);
-  }, [listing?.id, listing?.travelTimes]);
+  }, [listing?.id, listingTravelTimesKey]);
+
+  // What the map draws of the listing, by value. The reload after every action is a new object,
+  // and the map effect below used to redraw every marker and move the camera back to the overview
+  // for it, from wherever the user had zoomed to.
+  const mapListing = useMemo(
+    () =>
+      listing == null
+        ? null
+        : { id: listing.id, latitude: listing.latitude, longitude: listing.longitude, address: listing.address },
+    [listing?.id, listing?.latitude, listing?.longitude, listing?.address],
+  );
 
   useEffect(() => {
     document.querySelector('.app__content')?.scrollTo({ top: 0 });
   }, [listingId]);
+  const [ratingInFlight, setRatingInFlight] = useState(false);
+  const [ratingModel, setRatingModel] = useState(DEFAULT_RATING_MODEL);
 
   useEffect(() => {
     async function fetchListing() {
@@ -301,7 +310,8 @@ export default function ListingDetail() {
   // between them. The map itself is no longer created or destroyed here, so this only ever adds and
   // removes its own markers.
   useEffect(() => {
-    if (!mapReady || !map.current || !listing || !hasGeo) return undefined;
+    if (!mapReady || !map.current || !mapListing || !hasGeo) return undefined;
+    const listing = mapListing;
 
     const mapInstance = map.current;
     const markers = [];
@@ -312,7 +322,7 @@ export default function ListingDetail() {
       new maplibregl.Marker({ color: MARKER_COLORS.listing })
         .setLngLat([listing.longitude, listing.latitude])
         .setPopup(
-          new maplibregl.Popup({ offset: 25 }).setHTML(
+          new maplibregl.Popup({ offset: 25, className: 'listing-detail-popup' }).setHTML(
             `<h4>${t('listing.detail.mapPopupListingLocation')}</h4><p>${escapeHtml(listing.address ?? '')}</p>`,
           ),
         )
@@ -324,7 +334,7 @@ export default function ListingDetail() {
         new maplibregl.Marker({ color: MARKER_COLORS.home })
           .setLngLat([home.coords.lng, home.coords.lat])
           .setPopup(
-            new maplibregl.Popup({ offset: 25 }).setHTML(
+            new maplibregl.Popup({ offset: 25, className: 'listing-detail-popup' }).setHTML(
               `<h4>${escapeHtml(home.label || t('listing.detail.mapPopupHomeAddress'))}</h4><p>${escapeHtml(home.address ?? '')}</p>`,
             ),
           )
@@ -356,7 +366,7 @@ export default function ListingDetail() {
       markers.forEach((marker) => marker.remove());
       mapInstance.off('styledata', drawRoute);
     };
-  }, [mapReady, listing, homeAddresses, routeTimes, routeMode, hasGeo, t]);
+  }, [mapReady, mapListing, homeAddresses, routeTimes, routeMode, hasGeo, t]);
 
   const confirmDeletion = async (hardDelete, remember) => {
     try {
@@ -644,35 +654,7 @@ export default function ListingDetail() {
 
       <div className="listing-detail__grid">
         <div className="listing-detail__main">
-          <section className="listing-detail__media listing-detail__sec--media">
-            <div className={`listing-detail__image${!listing.image_url ? ' listing-detail__image--placeholder' : ''}`}>
-              <Image
-                src={listing.image_url ?? no_image}
-                fallback={<img src={no_image} alt={t('listing.detail.noImageAlt')} />}
-                alt={listing.title || t('listing.detail.defaultTitle')}
-                style={{ width: '100%', height: '100%' }}
-                preview={listing.image_url ? { visible: imagePreview, onVisibleChange: setImagePreview } : false}
-              />
-              {/* A plain button rather than a Semi one: it sits on a photograph, so its colours
-                  are the scrim's and not the theme's, and fighting a component's own palette with
-                  `!important` to get there is the worse trade. */}
-              {listing.image_url && (
-                <button
-                  type="button"
-                  className="listing-detail__image-expand"
-                  aria-label={t('listing.detail.expandImage')}
-                  onClick={() => setImagePreview(true)}
-                >
-                  <IconMaximize aria-hidden="true" />
-                </button>
-              )}
-            </div>
-            {!listing.image_url && (
-              <Text type="tertiary" size="small" className="listing-detail__image-note">
-                {t('listing.detail.noImageAlt')}
-              </Text>
-            )}
-          </section>
+          <ListingPictures listing={listing} />
 
           <div className="listing-detail__sec--description">
             <PhoneCollapse
@@ -729,6 +711,20 @@ export default function ListingDetail() {
                 onSaveNotes={handleSaveNotes}
                 notesSaving={notesSaving}
                 notesDirty={(notesDraft ?? '') !== (listing.notes ?? '')}
+                aiVerdict={listing.ai_verdict}
+                immocockpitVerdict={listing.immocockpitVerdict}
+                immocockpitAnalysis={listing.immocockpitAnalysis}
+                coldRentOverride={listing.cold_rent_override}
+                onSaveColdRentOverride={saveColdRentOverride}
+                onRateWithAi={handleRateWithAI}
+                ratingInFlight={ratingInFlight}
+                ratingModel={ratingModel}
+                ratingModels={RATING_MODELS}
+                onRatingModelChange={setRatingModel}
+                isAdmin={isAdmin}
+                ownAiConfigured={ratingSettings.configured === true}
+                onRateWithOwnAi={handleRateWithOwnAi}
+                ownAiRatingInFlight={ownAiRatingInFlight}
               />
             </PhoneCollapse>
           </div>
@@ -744,6 +740,27 @@ export default function ListingDetail() {
           </div>
 
           <div className="listing-detail__sec--finance">
+            {/* Affordability (below) answers "can I have this?"; this answers "is it a good
+                deal?" - a question Fredy's own finance module deliberately doesn't model, since it
+                never nets rental income against the mortgage. Always available for a priced
+                purchase listing, independent of whether the household profile is set up. */}
+            {!isRental && listing.price != null && (
+              <section className="listing-card listing-detail__finance-hint">
+                <Space align="center" wrap>
+                  <IconEuro className="listing-detail__finance-hint-icon" />
+                  <Text type="secondary">{t('listing.detail.analyzeHint')}</Text>
+                  <Button
+                    theme="borderless"
+                    size="small"
+                    icon={<IconLink />}
+                    onClick={() => window.open(buildImmocockpitUrl(listing), '_blank', 'noopener,noreferrer')}
+                  >
+                    {t('listing.detail.analyzeButton')}
+                  </Button>
+                </Space>
+              </section>
+            )}
+
             <ListingFinanceCard listing={listing} />
 
             {/* Without the matching half of the profile there is nothing to compute, so offer the
@@ -769,78 +786,6 @@ export default function ListingDetail() {
                 </Space>
               </section>
             )}
-          </div>
-
-          {/* immocockpit's own verdicts, the cold rent override that feeds them, and the AI raters -
-              fork-only, no upstream equivalent, so it gets its own card rather than a slot inside one
-              of theirs. */}
-          <div className="listing-detail__sec--valuation">
-            <section className="listing-card">
-              <Space align="center" wrap>
-                <ImmocockpitVerdictBadge verdict={listing.immocockpitVerdict} analysis={listing.immocockpitAnalysis} />
-                <PriceFactorBadge analysis={listing.immocockpitAnalysis} />
-                <ColdRentOverrideEditor currentOverride={listing.cold_rent_override} onSave={saveColdRentOverride} />
-              </Space>
-
-              {/* Answers "is it a good deal?" - a question Fredy's own finance module deliberately
-                  doesn't model, since it never nets rental income against the mortgage. Always
-                  available for a priced purchase listing, independent of whether the household
-                  profile is set up. */}
-              {!isRental && listing.price != null && (
-                <>
-                  <Divider margin="1rem" />
-                  <Space align="center" wrap>
-                    <IconEuro />
-                    <Text type="secondary">{t('listing.detail.analyzeHint')}</Text>
-                    <Button
-                      theme="borderless"
-                      size="small"
-                      icon={<IconLink />}
-                      onClick={() => window.open(buildImmocockpitUrl(listing), '_blank', 'noopener,noreferrer')}
-                    >
-                      {t('listing.detail.analyzeButton')}
-                    </Button>
-                  </Space>
-                </>
-              )}
-
-              <Divider margin="1rem" />
-              <Space wrap>
-                {isAdmin && (
-                  <>
-                    <Select
-                      size="small"
-                      value={ratingModel}
-                      onChange={(val) => setRatingModel(val)}
-                      disabled={ratingInFlight}
-                      style={{ minWidth: 130 }}
-                    >
-                      {RATING_MODELS.map((model) => (
-                        <Select.Option key={model.value} value={model.value}>
-                          {model.label}
-                        </Select.Option>
-                      ))}
-                    </Select>
-                    <Button loading={ratingInFlight} disabled={ratingInFlight} onClick={handleRateWithAI}>
-                      {t('listing.detail.rateWithAi')}
-                    </Button>
-                  </>
-                )}
-                {!ratingSettings.configured ? (
-                  <Tooltip content={t('listing.detail.rateWithOwnAiNotConfigured')}>
-                    {/* Wrapped in a span: a disabled Button swallows the events the Tooltip listens
-                        for, so the explanation for why it's greyed out would never appear. */}
-                    <span>
-                      <Button disabled>{t('listing.detail.rateWithOwnAi')}</Button>
-                    </span>
-                  </Tooltip>
-                ) : (
-                  <Button loading={ownAiRatingInFlight} disabled={ownAiRatingInFlight} onClick={handleRateWithOwnAi}>
-                    {t('listing.detail.rateWithOwnAi')}
-                  </Button>
-                )}
-              </Space>
-            </section>
           </div>
 
           {/* A narrow list of departures, which is why it belongs beside the map rather than under

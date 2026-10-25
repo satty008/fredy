@@ -83,9 +83,9 @@ export const MOBILE_OPERATOR_KEY = 'mop';
 
 /**
  * Normalizes a filter value that may be a single id/verdict or an array of them (aiVerdict,
- * icVerdict, priceFactor and job are multi-select; every other filter here stays single-valued)
- * into a plain array, so the two call sites below that need to iterate don't each have to know
- * which shape a given filter happens to be.
+ * icVerdict and job are multi-select; every other filter here stays single-valued) into a plain
+ * array, so the call sites that need to iterate don't each have to know which shape a given filter
+ * happens to be.
  *
  * @param {*} value
  * @returns {Array}
@@ -95,6 +95,19 @@ function toList(value) {
     return [];
   }
   return Array.isArray(value) ? value : [value];
+}
+
+/**
+ * A multi-select filter's value lives in state as an array, but the API query string is one flat
+ * parameter per filter - so it travels as the same comma-separated form the URL already uses, and
+ * the server splits it back apart.
+ *
+ * @param {string[]|string|null} value
+ * @returns {string|null}
+ */
+function toCommaParam(value) {
+  const list = toList(value);
+  return list.length > 0 ? list.join(',') : null;
 }
 
 /**
@@ -217,10 +230,13 @@ export function toListingsQuery(values) {
     freeTextFilter: values.q,
     filter: {
       watchListFilter: values.watch,
-      jobNameFilter: values.job,
+      jobNameFilter: toCommaParam(values.job),
       activityFilter: isHiddenView ? null : values.active,
-      providerFilter: values.provider,
+      providerFilter: toCommaParam(values.provider),
       statusFilter: values.status,
+      aiVerdictFilter: toCommaParam(values.aiVerdict),
+      icVerdictFilter: toCommaParam(values.icVerdict),
+      priceFactorFilter: toCommaParam(values.priceFactor),
       // The server turns this into a price range from the saved profile; it ignores the
       // filter entirely when there is no profile to derive one from.
       affordabilityFilter: values.afford,
@@ -334,6 +350,76 @@ export function describeActiveFilters(values, { t, jobs = [], providers = [] }) 
     label: labels[key](),
   }));
 }
+/**
+ * One of the filters offered as a chip above the listings, so the ones people reach for daily are
+ * a click away instead of inside the drawer.
+ *
+ * @typedef {Object} QuickFilter
+ * @property {string} id
+ * @property {string} key The URL key it sets, which is also the key of the chip it stands in for.
+ * @property {string} labelKey Translation key of its label.
+ * @property {(values: Object) => boolean} isOn Whether the page is filtered this way right now.
+ * @property {(values: Object) => Object} toggle The URL patch for switching it on or off.
+ */
+
+/**
+ * The quick filters, in the order they are shown.
+ *
+ * Every one of them is a filter the drawer already has; a chip only sets the same URL value. The
+ * two activity chips and the two status chips each share a key, so lighting one switches its
+ * sibling off rather than asking for listings that are active and inactive at once.
+ *
+ * @type {QuickFilter[]}
+ */
+export const QUICK_FILTERS = [
+  {
+    id: 'active',
+    key: 'active',
+    labelKey: 'listings.filterActive',
+    isOn: (values) => values.hidden !== true && values.active === true,
+    toggle: (values) => showPatch(values.hidden !== true && values.active === true ? 'all' : 'true'),
+  },
+  {
+    id: 'watch',
+    key: 'watch',
+    labelKey: 'nav.watchlist',
+    isOn: (values) => values.watch === true,
+    toggle: (values) => ({ watch: values.watch === true ? null : true, page: 1 }),
+  },
+  {
+    id: 'applied',
+    key: 'status',
+    labelKey: 'listings.filterStatusApplied',
+    isOn: (values) => values.status === 'applied',
+    toggle: (values) => ({ status: values.status === 'applied' ? null : 'applied', page: 1 }),
+  },
+  {
+    id: 'noStatus',
+    key: 'status',
+    labelKey: 'listings.filterStatusNone',
+    isOn: (values) => values.status === 'none',
+    toggle: (values) => ({ status: values.status === 'none' ? null : 'none', page: 1 }),
+  },
+  {
+    id: 'inactive',
+    key: 'active',
+    labelKey: 'listings.filterInactive',
+    isOn: (values) => values.hidden !== true && values.active === false,
+    toggle: (values) => showPatch(values.hidden !== true && values.active === false ? 'all' : 'false'),
+  },
+];
+
+/**
+ * The filter keys a lit quick chip already shows, so the row of removable chips can leave them out
+ * instead of naming the same filter twice.
+ *
+ * @param {Object} values The full URL state.
+ * @returns {Set<string>}
+ */
+export function quickFilterKeys(values) {
+  return new Set(QUICK_FILTERS.filter((filter) => filter.isOn(values)).map((filter) => filter.key));
+}
+
 /**
  * Restricts the available providers to those for which results exist (or are configured
  * in the user's jobs), so the filter dropdown only contains relevant providers.

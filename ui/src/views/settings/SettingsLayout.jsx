@@ -3,16 +3,6 @@
  * Licensed under Apache-2.0 with Commons Clause and Attribution/Naming Clause
  */
 
-import {
-  IconHome,
-  IconMapPin,
-  IconListView,
-  IconBell,
-  IconKey,
-  IconMail,
-  IconAIFilledLevel1,
-} from '@douyinfe/semi-icons';
-
 import ScopeBadge from '../../components/scopeBadge/ScopeBadge.jsx';
 import SettingsShell from '../../components/settingsShell/SettingsShell.jsx';
 import { useTranslation } from '../../services/i18n/i18n.jsx';
@@ -31,19 +21,22 @@ import { useTranslation } from '../../services/i18n/i18n.jsx';
  * content. The absence of a band was the statement while this was one page; it stopped being one
  * when every tab became a route somebody can arrive on directly.
  *
+ * The tabs carry words only. They used to carry an icon each, which the strip no longer draws: six
+ * pictograms in a row said nothing the six labels beside them did not.
+ *
  * @returns {React.ReactElement}
  */
 export default function SettingsLayout() {
   const t = useTranslation();
 
   const tabs = [
-    { path: '/settings/preferences', label: t('settings.tabPreferences'), icon: <IconHome size="small" /> },
-    { path: '/settings/travel-time', label: t('settings.tabTravelTime'), icon: <IconMapPin size="small" /> },
-    { path: '/settings/listings', label: t('settings.tabListingDetails'), icon: <IconListView size="small" /> },
-    { path: '/settings/application', label: t('settings.tabApplication'), icon: <IconMail size="small" /> },
-    { path: '/settings/notifications', label: t('settings.tabNotifications'), icon: <IconBell size="small" /> },
-    { path: '/settings/ai-rating', label: t('settings.tabAiRating'), icon: <IconAIFilledLevel1 size="small" /> },
-    { path: '/settings/connections', label: t('settings.tabConnections'), icon: <IconKey size="small" /> },
+    { path: '/settings/preferences', label: t('settings.tabPreferences') },
+    { path: '/settings/travel-time', label: t('settings.tabTravelTime') },
+    { path: '/settings/listings', label: t('settings.tabListingDetails') },
+    { path: '/settings/application', label: t('settings.tabApplication') },
+    { path: '/settings/notifications', label: t('settings.tabNotifications') },
+    { path: '/settings/ai-rating', label: t('settings.tabAiRating') },
+    { path: '/settings/connections', label: t('settings.tabConnections') },
   ];
 
   return (

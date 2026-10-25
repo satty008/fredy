@@ -7,6 +7,6 @@ npm-debug.log
 .idea
 .vscode
 tools/release/config.json
-.agents.env
 .agents
 graft/
+.agents.env

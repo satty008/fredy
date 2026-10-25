@@ -8,7 +8,7 @@ import Database from 'better-sqlite3';
 
 import { up } from '../../lib/services/storage/migrations/sql/46.listing-cold-rent-override.js';
 
-describe('migration 46 - listing cold rent override', () => {
+describe('migration 36 - listing cold rent override', () => {
   let db;
 
   beforeEach(() => {

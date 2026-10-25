@@ -3,15 +3,17 @@
  * Licensed under Apache-2.0 with Commons Clause and Attribution/Naming Clause
  */
 
-import { Link } from 'react-router';
 import { Checkbox } from '@douyinfe/semi-ui-19';
+import { Link } from 'react-router';
 import { IconMapPin } from '@douyinfe/semi-icons';
-import no_image from '../../assets/no_image.png';
+import ListingPhoto from '../listings/ListingPhoto.jsx';
+import { listingPictureSrc } from '../../services/listings/listingPictures.js';
 import { formatEuroPrice } from '../../services/price/priceService.js';
 import * as timeService from '../../services/time/timeService.js';
 import StatusControl from '../listings/StatusControl.jsx';
 import AffordabilityChip from '../listings/AffordabilityChip.jsx';
 import AiVerdictBadge from '../listings/AiVerdictBadge.jsx';
+import { rentIncludesCharges } from '../../services/finance/rentBasis.js';
 import ImmocockpitVerdictBadge from '../listings/ImmocockpitVerdictBadge.jsx';
 import PriceFactorBadge from '../listings/PriceFactorBadge.jsx';
 import PriceChangeBadge from '../listings/PriceChangeBadge.jsx';
@@ -25,7 +27,7 @@ import './ListingsTable.less';
 import { useTranslation, useLocale } from '../../services/i18n/i18n.jsx';
 
 /**
- * @param {{ listings: object[], onWatch: Function, onNavigate: Function, onDelete: Function, onRestore?: Function, onReactivate?: Function, isHiddenView?: boolean, onStatusChange: Function, selectedIds?: Set<string>, onToggleSelect?: Function, onApplication?: Function }} props
+ * @param {{ listings: object[], onWatch: Function, onNavigate: Function, onDelete: Function, onRestore?: Function, onReactivate?: Function, isHiddenView?: boolean, onStatusChange: Function, onApplication?: Function, selectedIds?: Set<string>, onToggleSelect?: Function }} props
  */
 const ListingsTable = ({
   listings,
@@ -36,9 +38,9 @@ const ListingsTable = ({
   onReactivate,
   isHiddenView = false,
   onStatusChange,
+  onApplication,
   selectedIds,
   onToggleSelect,
-  onApplication,
 }) => {
   const t = useTranslation();
   const locale = useLocale();
@@ -50,9 +52,6 @@ const ListingsTable = ({
       {/* Only over rows: with none, the titles stood under the "no results" illustration. */}
       {listings.length > 0 && (
         <div className="listingsTable__head" aria-hidden="true">
-          {/* Matches the row's select checkbox column, always rendered by the one caller, so the
-              header's columns keep standing over the row's. */}
-          <span />
           <span />
           <span>{t('listings.columnListing')}</span>
           <span className="listingsTable__head__right">{t('listings.columnPrice')}</span>
@@ -72,11 +71,11 @@ const ListingsTable = ({
           key={item.id}
           className="listingsTable__row"
           onClick={(event) => {
-            if (event.target.closest('a') == null) onNavigate(item.id);
+            if (event.target.closest('a, .listingsTable__row__select') == null) onNavigate(item.id);
           }}
         >
           {onToggleSelect && (
-            <div className="listingsTable__row__select" onClick={(e) => e.stopPropagation()}>
+            <div className="listingsTable__row__select">
               <Checkbox
                 checked={selectedIds?.has(item.id) ?? false}
                 onChange={() => onToggleSelect(item.id)}
@@ -86,13 +85,7 @@ const ListingsTable = ({
           )}
 
           <div className="listingsTable__row__thumb">
-            <img
-              src={item.image_url || no_image}
-              alt=""
-              onError={(e) => {
-                e.target.src = no_image;
-              }}
-            />
+            <ListingPhoto src={listingPictureSrc(item)} className="listingsTable__row__thumbPhoto" />
           </div>
 
           <div className="listingsTable__row__title">
@@ -118,23 +111,27 @@ const ListingsTable = ({
           <div className="listingsTable__row__price">
             {item.price ? (
               <>
-                <div className="listingsTable__row__price__main">
-                  {formatEuroPrice(item.price, locale)}
-                  <AffordabilityChip verdict={item.affordabilityVerdict} dealType={item.dealType} />
+                <span className="listingsTable__row__amount">{formatEuroPrice(item.price, locale)}</span>
+                <span className="listingsTable__row__perSqm">
+                  <PricePerSqmBadge listing={item} />
+                  <AffordabilityChip
+                    verdict={item.affordabilityVerdict}
+                    dealType={item.dealType}
+                    chargesIncluded={rentIncludesCharges(item)}
+                  />
                   <PriceChangeBadge
                     price={item.price}
                     previousPrice={item.previous_price}
                     changedAt={item.price_changed_at}
                   />
-                  <PricePerSqmBadge listing={item} />
-                </div>
-                <AiVerdictBadge verdict={item.ai_verdict} />
-                <ImmocockpitVerdictBadge verdict={item.immocockpitVerdict} analysis={item.immocockpitAnalysis} />
-                <PriceFactorBadge analysis={item.immocockpitAnalysis} />
+                </span>
               </>
             ) : (
               <span className="listingsTable__row__empty">---</span>
             )}
+            <AiVerdictBadge verdict={item.ai_verdict} />
+            <ImmocockpitVerdictBadge verdict={item.immocockpitVerdict} analysis={item.immocockpitAnalysis} />
+            <PriceFactorBadge analysis={item.immocockpitAnalysis} />
           </div>
 
           <div className="listingsTable__row__address">

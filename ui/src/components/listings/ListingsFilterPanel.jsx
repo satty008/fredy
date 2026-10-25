@@ -120,7 +120,6 @@ export default function ListingsFilterPanel({
           <Select.Option value="accepted">{t('listings.filterStatusAccepted')}</Select.Option>
           <Select.Option value="none">{t('listings.filterStatusNone')}</Select.Option>
         </FilterSelect>
-
         <FilterSelect
           help={t('listings.filterAiVerdictHelp')}
           placeholder={t('listings.filterAiVerdictPlaceholder')}

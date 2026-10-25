@@ -126,8 +126,6 @@ describe('DELETE /filtered', () => {
 
     expect(lastFilters()).toMatchObject({
       freeTextFilter: 'Altbau',
-      // Multi-select even for one value - see listingsAffordabilityFilter.test.js, which pins
-      // this same shape for the /table path this bulk delete shares its normalisation with.
       providerFilter: ['immoscout'],
       activityFilter: false,
       watchListFilter: true,

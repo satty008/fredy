@@ -3,8 +3,11 @@
  * Licensed under Apache-2.0 with Commons Clause and Attribution/Naming Clause
  */
 
-import { Button, TextArea } from '@douyinfe/semi-ui-19';
+import { Button, Select, Tag, TextArea, Tooltip } from '@douyinfe/semi-ui-19';
 
+import ImmocockpitVerdictBadge from '../../../components/listings/ImmocockpitVerdictBadge.jsx';
+import PriceFactorBadge from '../../../components/listings/PriceFactorBadge.jsx';
+import ColdRentOverrideEditor from './ColdRentOverrideEditor.jsx';
 import AttachmentsCard from './AttachmentsCard.jsx';
 import { useTranslation } from '../../../services/i18n/i18n.jsx';
 import './ListingWorkspace.less';
@@ -24,6 +27,21 @@ import './ListingWorkspace.less';
  * @param {() => void} props.onSaveNotes
  * @param {boolean} props.notesSaving
  * @param {boolean} props.notesDirty - Whether the draft differs from what is stored.
+ * @param {('good'|'maybe'|'bad'|null)} [props.aiVerdict] - The stored AI review verdict, if any.
+ * @param {('good'|'maybe'|'bad'|null)} [props.immocockpitVerdict] - The server-computed Immocockpit verdict.
+ * @param {Object|null} [props.immocockpitAnalysis] - The numbers behind it, for the tooltip.
+ * @param {number|null} [props.coldRentOverride] - The user's own monthly cold rent, if set.
+ * @param {(coldRent: number|null) => Promise<void>} [props.onSaveColdRentOverride]
+ * @param {() => void} [props.onRateWithAi]
+ * @param {boolean} [props.ratingInFlight]
+ * @param {string} [props.ratingModel]
+ * @param {{ value: string, label: string }[]} [props.ratingModels]
+ * @param {(value: string) => void} [props.onRatingModelChange]
+ * @param {boolean} [props.isAdmin] - Whether the agentic "Rate with AI" controls are offered; the
+ *   server only lets admins run it.
+ * @param {boolean} [props.ownAiConfigured] - Whether the user has a provider for "Rate with my AI".
+ * @param {() => void} [props.onRateWithOwnAi]
+ * @param {boolean} [props.ownAiRatingInFlight]
  * @returns {React.ReactElement}
  */
 export default function ListingWorkspace({
@@ -33,6 +51,20 @@ export default function ListingWorkspace({
   onSaveNotes,
   notesSaving,
   notesDirty,
+  aiVerdict = null,
+  immocockpitVerdict = null,
+  immocockpitAnalysis = null,
+  coldRentOverride = null,
+  onSaveColdRentOverride,
+  onRateWithAi,
+  ratingInFlight = false,
+  ratingModel,
+  ratingModels = [],
+  onRatingModelChange,
+  isAdmin = false,
+  ownAiConfigured = false,
+  onRateWithOwnAi,
+  ownAiRatingInFlight = false,
 }) {
   const t = useTranslation();
 
@@ -49,6 +81,20 @@ export default function ListingWorkspace({
       <div className="listing-workspace__columns">
         <div className="listing-workspace__notes">
           <h3 className="listing-workspace__subtitle">{t('listing.detail.notesTitle')}</h3>
+          {/* The three verdicts about this listing - the AI's reading of the text and photos, and the
+              two number-only screens from immocockpit - side by side so they can be compared. */}
+          <div className="listing-workspace__verdicts" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {aiVerdict && (
+              <Tag color={aiVerdict === 'good' ? 'green' : aiVerdict === 'maybe' ? 'amber' : 'red'} shape="circle">
+                {t(`listings.filterAiVerdict${aiVerdict[0].toUpperCase()}${aiVerdict.slice(1)}`)}
+              </Tag>
+            )}
+            <ImmocockpitVerdictBadge verdict={immocockpitVerdict} analysis={immocockpitAnalysis} />
+            <PriceFactorBadge analysis={immocockpitAnalysis} />
+            {onSaveColdRentOverride && (
+              <ColdRentOverrideEditor currentOverride={coldRentOverride} onSave={onSaveColdRentOverride} />
+            )}
+          </div>
           <TextArea
             value={notesDraft}
             onChange={onNotesChange}
@@ -69,13 +115,47 @@ export default function ListingWorkspace({
       <div className="listing-workspace__footer">
         <Button
           className="listing-workspace__save"
-          theme="borderless"
+          theme="outline"
           loading={notesSaving}
           disabled={notesSaving || !notesDirty}
           onClick={onSaveNotes}
         >
           {t('listing.detail.storeNotes')}
         </Button>
+        {isAdmin && onRateWithAi && ratingModels.length > 0 && (
+          <Select
+            size="small"
+            value={ratingModel}
+            onChange={onRatingModelChange}
+            disabled={ratingInFlight}
+            style={{ minWidth: 130 }}
+          >
+            {ratingModels.map((model) => (
+              <Select.Option key={model.value} value={model.value}>
+                {model.label}
+              </Select.Option>
+            ))}
+          </Select>
+        )}
+        {isAdmin && onRateWithAi && (
+          <Button loading={ratingInFlight} disabled={ratingInFlight} onClick={onRateWithAi}>
+            {t('listing.detail.rateWithAi')}
+          </Button>
+        )}
+        {onRateWithOwnAi &&
+          (ownAiConfigured ? (
+            <Button loading={ownAiRatingInFlight} disabled={ownAiRatingInFlight} onClick={onRateWithOwnAi}>
+              {t('listing.detail.rateWithOwnAi')}
+            </Button>
+          ) : (
+            <Tooltip content={t('listing.detail.rateWithOwnAiNotConfigured')}>
+              {/* Wrapped in a span: a disabled Button swallows the events the Tooltip listens for, so
+                  the explanation for why it's greyed out would never appear. */}
+              <span>
+                <Button disabled>{t('listing.detail.rateWithOwnAi')}</Button>
+              </span>
+            </Tooltip>
+          ))}
       </div>
     </section>
   );

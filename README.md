@@ -25,7 +25,7 @@
 
 # Fredy 🏡 - Your Self-Hosted Real Estate Finder for Europe
 
-**Fredy** watches **26 real estate portals** across 🇩🇪 🇦🇹 🇨🇭 🇪🇸 🇮🇹 🇵🇹 for you (e.g. Immoscout,
+**Fredy** watches **29 real estate portals** across 🇩🇪 🇦🇹 🇨🇭 🇪🇸 🇮🇹 🇵🇹 🇫🇷 for you (e.g. Immoscout,
 Kleinanzeigen etc), drops duplicates across platforms, and notifies you via **Slack, Telegram,
 Email, ntfy, Discord and more** the moment a new listing appears. Searches are managed from a Web
 UI, and you never see the same listing twice.
@@ -43,9 +43,9 @@ On top of the listing itself, Fredy answers the three questions a portal will no
   <a href="https://trendshift.io/repositories/43464?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-43464" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/43464/daily?language=JavaScript" alt="orangecoding%2Ffredy | Trendshift" width="250" height="55"/></a>
 </p>
 
-| Fredy Maps View                                  | Dashboard                                               | Found Listings                                                              |
-|--------------------------------------------------|-----------------------------------------------------------------------|-----------------------------------------------------------------------------|
-| ![Screenshot showing Fredy](doc/screenshot1.png) | ![Screenshot showing job configuration in Fredy](doc/screenshot3.png) | ![Screenshot showing found listings in Fredy](doc/screenshot2.png) |
+| Fredy Maps View                                  | Dashboard                                               | Listings Overview                                                             | Detail View                                                             |
+|--------------------------------------------------|-----------------------------------------------------------------------|-----------------------------------------------------------------------------|-----------------------------------------------------------------------------|
+| ![Screenshot showing Fredy](doc/screenshot1.png) | ![Screenshot showing job configuration in Fredy](doc/screenshot3.png) | ![Screenshot showing found listings in Fredy](doc/screenshot2.png) | ![Screenshot showing listing details in Fredy](doc/screenshot4.png) |
 
 ------------------------------------------------------------------------
 
@@ -96,11 +96,11 @@ Fredy is in the [Unraid](https://unraid.net/) community store.
 
 ## ✨ What you get
 
--   🏠 **26 portals** across 🇩🇪 🇦🇹 🇨🇭 🇪🇸 🇮🇹 🇵🇹: ImmoScout24 (Germany and Austria), Immowelt,
-    Kleinanzeigen, WG-Gesucht, willhaben, Flatfox, idealista, Subito and
-    [18 more](doc/providers.md)
+-   🏠 **29 portals** across 🇩🇪 🇦🇹 🇨🇭 🇪🇸 🇮🇹 🇵🇹 🇫🇷: ImmoScout24 (Germany and Austria), Immowelt,
+    Kleinanzeigen, WG-Gesucht, willhaben, Flatfox, idealista, Subito, leboncoin, SeLoger and
+    [19 more](doc/providers.md)
 -   ⚡ **Instant notifications**: Slack, Telegram, Email (SMTP, SendGrid, Mailjet, Resend), ntfy,
-    Discord, Mattermost, Pushover, Apprise and more
+    Gotify, Discord, Mattermost, Pushover, Apprise and more
 -   🔄 **Deduplication across platforms**: the same flat advertised on ImmoScout, Immowelt and
     Kleinanzeigen reaches you once, matched on living space, rooms and location rather than on the
     headline, no two portals write that the same way
@@ -120,7 +120,17 @@ Fredy is in the [Unraid](https://unraid.net/) community store.
     **ImmoScout Mobile API**
 
 ------------------------------------------------------------------------
+## A word about AI
+Being a software engineer for almost 25 years now, I've seen a lot of so-called trends come and go. I've seen the internet develop from a place where nerds share their ideas into something accessible to everybody...
 
+Now it might make me sound old, but I'm coming from a generation that was lucky enough to have a childhood without mobile phones, but grew up seeing all the things develop that shape today's society. I've learned early on that you either embrace change or you fall behind quickly.
+That being said, I'm using AI (Claude, to be exact) for a lot of things today. E.g. building dashboards in my Home Assistant, helping me out with writing tests... What I don't use it for (at least not yet) is letting it write the code for me. Why, you may ask? Call me old-fashioned, but I love being an engineer. While AI might be better at specific things, Fredy is (and always has been) a heart project of mine, and I just love solving problems on my own. As releasing things for Fredy is not about speed, I can afford to take a little time for things ;)
+
+So where exactly is AI used in Fredy, you may ask? Well, I sometimes use Claude to let it write tests for me. I often use it to review my code and point me to issues, and I sometimes use it to improve my written English. I'm actually quite good at speaking it, however, obviously, I'm not a native speaker...
+
+Hopefully, this answers a couple of the questions you might have.
+
+------------------------------------------------------------------------
 ## 🧩 Basic architecture overview
 
 | Concept | What it is |
@@ -235,7 +245,7 @@ class node_debug,node_mcp toneMint
 
 | Topic | What is in there |
 |---|---|
-| [Providers & scraping](doc/providers.md) | All 26 providers, the Immoscout / idealista / Casa.it specifics, and residential proxies for when a VPS gets blocked |
+| [Providers & scraping](doc/providers.md) | All 29 providers, the Immoscout / idealista / Casa.it / French portal specifics, and residential proxies for when a VPS gets blocked |
 | [Scam detection](doc/scam-detection.md) | The signals, their weights, the languages, and how to overrule Fredy |
 | [Financing calculator](doc/financing.md) | Rent and Annuitätendarlehen, Kaufnebenkosten, Restschuld, the 35 % rule |
 | [Travel time & public transport](doc/travel-time.md) | Addresses and place types, estimated vs exact, route drawing, departure boards, operator settings |
@@ -287,6 +297,12 @@ Fredy is backed by the **JetBrains Open Source Support Program**.
   <img alt="JetBrains Open Source Support Program" src="https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.svg" width="200">
 </picture>
 </a>
+
+### Much love goes out to...   
+
+I cannot thank the following people enough for generously donating through one of the options above. You guys keep me rollin'!   
+
+Markus Schneider,  @RaminGe, Thomas Müller, Stefan Weber, Andreas Fischer, Michael Wagner, Daniel Becker, Christian Hoffmann, Sebastian Schäfer, Martin Koch, Alexander Bauer, Jan Richter, Tobias Klein, Florian Wolf, Patrick Schröder, Dennis Neumann, Benjamin Schwarz, Matthias Zimmermann, Oliver Braun, Simon Krüger, Philipp Hartmann, Lukas Lange, Felix Werner, Nico Schmitz, Johannes Krause
 
 ------------------------------------------------------------------------
 

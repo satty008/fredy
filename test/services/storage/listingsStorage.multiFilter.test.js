@@ -69,7 +69,7 @@ describe('queryListings - multi-select filters', () => {
       );
       CREATE TABLE watch_list (id TEXT PRIMARY KEY, listing_id TEXT, user_id TEXT);
       CREATE TABLE listing_travel_times (listing_id TEXT);
-      CREATE TABLE listing_attachments (id TEXT PRIMARY KEY, listing_id TEXT);
+      CREATE TABLE listing_attachments (listing_id TEXT);
     `);
 
     // A resolvable rent reference so immocockpitVerdictFor doesn't bail out on price/size'd 'buy'
